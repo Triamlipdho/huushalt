@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.room)
 }
 
 // Set by the release workflow from the Git tag (v1.2.3 -> "1.2.3" / 10203).
@@ -67,11 +69,21 @@ android {
         compose = true
     }
 
+    testOptions {
+        // Robolectric UI tests need the app's resources.
+        unitTests.isIncludeAndroidResources = true
+    }
+
     dependenciesInfo {
         // The dependency metadata block is only meant for Google Play; keep the APK clean.
         includeInApk = false
         includeInBundle = false
     }
+}
+
+room {
+    // Exported schemas are committed, so future migrations can be written and tested.
+    schemaDirectory("$projectDir/schemas")
 }
 
 kotlin {
@@ -87,7 +99,18 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.core)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
+
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
 }

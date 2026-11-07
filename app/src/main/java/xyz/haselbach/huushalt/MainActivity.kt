@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import xyz.haselbach.huushalt.ui.HomeScreen
+import xyz.haselbach.huushalt.ui.HuushaltApp
 import xyz.haselbach.huushalt.ui.theme.HuushaltTheme
 
 class MainActivity : ComponentActivity() {
@@ -13,7 +13,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             HuushaltTheme {
-                HomeScreen()
+                HuushaltApp()
             }
         }
     }

@@ -16,7 +16,7 @@ It deliberately does one thing, chores, and does it without accounts, flatmates 
 
 ## Development
 
-Requirements: Android Studio (or JDK 17 + Android SDK).
+Requirements: Android Studio (or JDK 21 + Android SDK). JDK 21 is needed for the Robolectric UI tests.
 
 ```bash
 ./gradlew assembleDebug

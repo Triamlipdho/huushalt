@@ -1,8 +1,123 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- German only, Swiss spelling: ss instead of ß (F9.5). -->
-<resources>
+<!-- German only, Swiss spelling: always ss, never the sharp s (F9.5). -->
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">huushalt</string>
+
+    <!-- Navigation -->
+    <string name="nav_today">Heute</string>
+    <string name="nav_all">Alle Aufgaben</string>
+    <string name="action_back">Zurück</string>
+    <string name="action_add">Neue Aufgabe</string>
+
+    <!-- Home (F3) -->
     <string name="home_title">Heute</string>
+    <string name="home_section_overdue">Überfällig</string>
+    <string name="home_section_today">Heute</string>
+    <string name="home_section_upcoming">Demnächst</string>
+    <string name="home_progress" tools:ignore="PluralsCandidate">%1$d von %2$d erledigt</string>
     <string name="home_empty_title">Alles erledigt für heute</string>
-    <string name="home_empty_body">Sobald du Aufgaben erfasst hast, siehst du hier, was heute ansteht.</string>
+    <string name="home_empty_body">Geniess den Tag. Was demnächst ansteht, siehst du unten.</string>
+    <string name="home_no_chores_title">Noch keine Aufgaben</string>
+    <string name="home_no_chores_body">Tippe auf +, um deine erste Aufgabe zu erfassen.</string>
+
+    <!-- Chore list (F3.4) -->
+    <string name="all_sort_due">Nach Fälligkeit</string>
+    <string name="all_sort_name">Nach Name</string>
+    <string name="all_section_finished">Erledigt</string>
+
+    <!-- Due labels -->
+    <plurals name="due_overdue_days">
+        <item quantity="one">%d Tag überfällig</item>
+        <item quantity="other">%d Tage überfällig</item>
+    </plurals>
+    <string name="due_missed">%d× verpasst</string>
+    <string name="due_today">Heute fällig</string>
+    <string name="due_tomorrow">Morgen</string>
+    <string name="due_on">Fällig am %s</string>
+    <string name="due_finished">Erledigt</string>
+
+    <!-- Schedule descriptions -->
+    <string name="schedule_once">Einmalig</string>
+    <string name="schedule_daily">Täglich</string>
+    <string name="schedule_every_days" tools:ignore="PluralsCandidate">Alle %d Tage</string>
+    <string name="schedule_weekly_on">Jede Woche am %s</string>
+    <string name="schedule_every_weeks_on" tools:ignore="PluralsCandidate">Alle %1$d Wochen am %2$s</string>
+    <string name="schedule_monthly_on">Jeden Monat am %d.</string>
+    <string name="schedule_every_months_on" tools:ignore="PluralsCandidate">Alle %1$d Monate am %2$d.</string>
+    <string name="schedule_flexible">%s nach dem Erledigen</string>
+    <plurals name="interval_days">
+        <item quantity="one">%d Tag</item>
+        <item quantity="other">%d Tage</item>
+    </plurals>
+    <plurals name="interval_weeks">
+        <item quantity="one">%d Woche</item>
+        <item quantity="other">%d Wochen</item>
+    </plurals>
+    <plurals name="interval_months">
+        <item quantity="one">%d Monat</item>
+        <item quantity="other">%d Monate</item>
+    </plurals>
+    <string-array name="weekdays_short">
+        <item>Mo</item>
+        <item>Di</item>
+        <item>Mi</item>
+        <item>Do</item>
+        <item>Fr</item>
+        <item>Sa</item>
+        <item>So</item>
+    </string-array>
+
+    <!-- Actions on chores (F4) -->
+    <string name="action_complete">Erledigt</string>
+    <string name="action_complete_description">«%s» als erledigt markieren</string>
+    <string name="action_postpone">Verschieben</string>
+    <string name="action_edit">Bearbeiten</string>
+    <string name="action_delete">Löschen</string>
+    <string name="action_cancel">Abbrechen</string>
+    <string name="action_save">Speichern</string>
+    <string name="action_undo">Rückgängig</string>
+    <string name="snackbar_completed">«%s» erledigt</string>
+
+    <!-- Postpone (F4.4) -->
+    <string name="postpone_title">Verschieben auf</string>
+    <string name="postpone_tomorrow">Morgen</string>
+    <string name="postpone_next_week">In einer Woche</string>
+    <string name="postpone_pick_date">Datum wählen …</string>
+
+    <!-- Detail and history (F6) -->
+    <string name="detail_next_due">Nächstes Mal</string>
+    <string name="detail_last_done">Zuletzt erledigt</string>
+    <string name="detail_never_done">Noch nie</string>
+    <string name="detail_schedule">Wiederholung</string>
+    <string name="detail_notes">Notizen</string>
+    <string name="detail_history">Verlauf</string>
+    <string name="detail_history_empty">Noch nicht erledigt.</string>
+
+    <!-- Editor (F1, F2) -->
+    <string name="edit_title_new">Neue Aufgabe</string>
+    <string name="edit_title_edit">Aufgabe bearbeiten</string>
+    <string name="edit_name">Name</string>
+    <string name="edit_name_hint">z. B. Staubsaugen</string>
+    <string name="edit_notes">Notizen (optional)</string>
+    <string name="edit_repeat">Wiederholen</string>
+    <string name="edit_repeat_once">Einmalig</string>
+    <string name="edit_repeat_once_help">Nur einmal erledigen.</string>
+    <string name="edit_repeat_fixed">Nach festem Plan</string>
+    <string name="edit_repeat_fixed_help">Fällig an festen Tagen, z. B. jeden Dienstag – egal, wann du sie zuletzt erledigt hast.</string>
+    <string name="edit_repeat_flexible">Nach dem Erledigen</string>
+    <string name="edit_repeat_flexible_help">Wieder fällig eine bestimmte Zeit, nachdem du sie erledigt hast, z. B. 4 Wochen danach.</string>
+    <string name="edit_every">Alle</string>
+    <string name="edit_unit_days">Tage</string>
+    <string name="edit_unit_weeks">Wochen</string>
+    <string name="edit_unit_months">Monate</string>
+    <string name="edit_weekdays">An diesen Tagen</string>
+    <string name="edit_month_day">Am %d. des Monats (Tag des Fälligkeitsdatums)</string>
+    <string name="edit_due_once">Fällig am</string>
+    <string name="edit_due_next">Nächstes Mal fällig</string>
+    <string name="edit_due_adjusted">Passend zum Plan: %s</string>
+    <string name="edit_error_name">Bitte einen Namen eingeben.</string>
+    <string name="edit_error_interval">Bitte eine Zahl von 1 bis 999 eingeben.</string>
+    <string name="edit_error_weekday">Bitte mindestens einen Tag wählen.</string>
+    <string name="delete_title">«%s» löschen?</string>
+    <string name="delete_body">Der Verlauf wird ebenfalls gelöscht.</string>
 </resources>
