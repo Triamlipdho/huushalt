@@ -187,6 +187,18 @@ coming back to a wall of overdue chores is the fastest way to give up on the app
 | F11.3 | Timer: "15 Minuten putzen", optionally with a chore or room | Later |
 | F11.4 | "Nur eine Sache" mode: show only the next chore, nothing else | Later |
 
+## Implementation status
+
+| Milestone | Features | Status |
+|---|---|---|
+| 0 Project setup | Android project, CI, signed releases via GitHub Releases + Obtainium | Done (v0.1.0) |
+| 1 Chore basics | F1.1, F1.2, F2.1 to F2.6, F2.9, F3.1 to F3.4, F4.1, F4.2, F4.4, F4.7, F6.1, F6.2, F7.1, F8.1, F9.1, F9.2, F9.5, F10.5 | Done |
+| 2 Reminders | F5, F8.3 | Planned |
+| 3 Motivation and history | F6.3, F6.4, F7 | Planned |
+| 4 Holidays and catching up | F10.1 to F10.4, F10.6 | Planned |
+| 5 Checklists, rooms, more schedules | F1.3, F1.4, F1.7 to F1.9, F2.10 to F2.12, F3.5, F4.3, F4.5 | Planned |
+| 6 Settings and data | F8.2, F9.3, F9.4, F9.6 | Planned |
+
 ## Non-functional requirements
 
 | ID | Requirement |
