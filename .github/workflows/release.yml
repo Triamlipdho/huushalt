@@ -1,0 +1,98 @@
+name: Release
+
+# Push a tag like v1.2.3 to build a signed APK and publish it as a GitHub release.
+# Obtainium picks up the new release and offers the update on the phone.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Derive version from tag
+        id: version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [[ ! "$TAG" =~ ^v([0-9]+)\.([0-9]{1,2})\.([0-9]{1,2})$ ]]; then
+            echo "::error::Tag '$TAG' must look like v1.2.3 (minor and patch 0-99)."
+            exit 1
+          fi
+          major=${BASH_REMATCH[1]}; minor=${BASH_REMATCH[2]}; patch=${BASH_REMATCH[3]}
+          name="${TAG#v}"
+          code=$(( 10#$major * 10000 + 10#$minor * 100 + 10#$patch ))
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "Version $name, versionCode $code"
+
+      - name: Restore signing keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.HUUSHALT_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.HUUSHALT_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.HUUSHALT_KEY_ALIAS }}
+        run: |
+          # HUUSHALT_KEY_PASSWORD is optional: it defaults to the keystore password.
+          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Repository secret HUUSHALT_$name is missing. See README, section Releases."
+              exit 1
+            fi
+          done
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/huushalt-release.jks"
+          echo "HUUSHALT_KEYSTORE_FILE=$RUNNER_TEMP/huushalt-release.jks" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          # Release builds always start clean.
+          cache-read-only: true
+
+      - name: Build signed release APK
+        env:
+          HUUSHALT_VERSION_NAME: ${{ steps.version.outputs.name }}
+          HUUSHALT_VERSION_CODE: ${{ steps.version.outputs.code }}
+          HUUSHALT_KEYSTORE_PASSWORD: ${{ secrets.HUUSHALT_KEYSTORE_PASSWORD }}
+          HUUSHALT_KEY_ALIAS: ${{ secrets.HUUSHALT_KEY_ALIAS }}
+          HUUSHALT_KEY_PASSWORD: ${{ secrets.HUUSHALT_KEY_PASSWORD }}
+        run: ./gradlew testReleaseUnitTest assembleRelease
+
+      - name: Verify signature
+        id: apk
+        run: |
+          apk=app/build/outputs/apk/release/app-release.apk
+          if [ ! -f "$apk" ]; then
+            echo "::error::Signed APK not found. Is the signing configuration complete?"
+            ls -R app/build/outputs/apk/release || true
+            exit 1
+          fi
+          apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
+          "$apksigner" verify --print-certs "$apk"
+          out="huushalt-${{ steps.version.outputs.name }}.apk"
+          cp "$apk" "$out"
+          echo "file=$out" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.name }}
+        run: |
+          gh release create "$TAG" "${{ steps.apk.outputs.file }}" \
+            --title "huushalt $VERSION" \
+            --generate-notes \
+            --verify-tag
+
+      - name: Remove keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/huushalt-release.jks"

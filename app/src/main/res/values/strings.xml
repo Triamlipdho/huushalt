@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- German only, Swiss spelling: ss instead of ß (F9.5). -->
+<resources>
+    <string name="app_name">huushalt</string>
+    <string name="home_title">Heute</string>
+    <string name="home_empty_title">Alles erledigt für heute</string>
+    <string name="home_empty_body">Sobald du Aufgaben erfasst hast, siehst du hier, was heute ansteht.</string>
+</resources>
