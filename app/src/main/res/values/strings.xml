@@ -157,4 +157,39 @@
     <string name="settings_pick_time">Zeit wählen</string>
     <string name="settings_notifications_blocked">Mitteilungen sind für huushalt ausgeschaltet. Ohne sie gibt es keine Erinnerungen.</string>
     <string name="settings_timing_note">Erinnerungen kommen auf ein paar Minuten genau, damit der Akku geschont wird.</string>
+
+    <!-- Progress and motivation (F6.3, F7) -->
+    <string name="nav_progress">Fortschritt</string>
+    <plurals name="streak_days">
+        <item quantity="one">%d Tag</item>
+        <item quantity="other">%d Tage</item>
+    </plurals>
+    <string name="streak_home">🔥 %s in Folge alles erledigt</string>
+    <string name="streak_title">Alles erledigt in Folge</string>
+    <string name="streak_best">Bestwert: %s</string>
+    <string name="streak_free_day_note">Ein verpasster Tag pro Woche zählt nicht. Verschieben vor dem Fälligkeitsdatum ist kein Verpassen.</string>
+    <string name="stats_this_week">Diese Woche</string>
+    <string name="stats_this_month">Dieser Monat</string>
+    <string name="stats_last_week">Letzte Woche: %d</string>
+    <string name="stats_last_month">Letzter Monat: %d</string>
+    <string name="stats_on_time">Pünktlich</string>
+    <string name="stats_on_time_value">%d %%</string>
+    <string name="stats_on_time_note">Letzte 30 Tage</string>
+    <string name="stats_no_value">–</string>
+    <string name="stats_chart_title">Erledigt pro Woche</string>
+    <string name="stats_chart_description">Erledigt pro Woche, ältere zuerst: %s</string>
+    <string name="stats_activity">Zuletzt erledigt</string>
+    <string name="stats_activity_empty">Hier erscheint alles, was du erledigst.</string>
+    <string name="celebration_all_done">Alles erledigt für heute 🎉</string>
+    <string name="detail_chore_streak">%d× in Folge pünktlich erledigt</string>
+
+    <!-- Editing past completions (F6.4) -->
+    <string name="completion_title">Erledigt am %s</string>
+    <string name="completion_change_date">Datum ändern</string>
+    <string name="completion_delete">Eintrag löschen</string>
+
+    <!-- Motivation setting (F7.9) -->
+    <string name="settings_motivation">Motivation</string>
+    <string name="settings_motivation_switch">Serien und Feiern</string>
+    <string name="settings_motivation_summary">Zeigt, wie viele Tage in Folge alles erledigt war, und feiert erledigte Tage.</string>
 </resources>

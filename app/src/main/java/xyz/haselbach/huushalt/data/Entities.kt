@@ -7,8 +7,11 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.time.DayOfWeek
+import java.time.Instant
+import java.time.ZoneId
 import java.time.LocalDate
 import xyz.haselbach.huushalt.domain.Chore
+import xyz.haselbach.huushalt.domain.CompletionRecord
 import xyz.haselbach.huushalt.domain.RepeatUnit
 import xyz.haselbach.huushalt.domain.Schedule
 import xyz.haselbach.huushalt.domain.ScheduleMode
@@ -63,7 +66,16 @@ fun ChoreWithLastDone.toDomain() = Chore(
     anchorDate = chore.anchorDate,
     dueDate = chore.dueDate,
     lastDone = lastDone,
+    createdDate = Instant.ofEpochMilli(chore.createdAt).atZone(ZoneId.systemDefault()).toLocalDate(),
 )
+
+/** A completion with the name of its chore, for the activity log (F6.3). */
+data class CompletionWithName(
+    @Embedded val completion: CompletionEntity,
+    @ColumnInfo(name = "choreName") val choreName: String,
+)
+
+fun CompletionEntity.toRecord() = CompletionRecord(choreId, doneDate, previousDueDate)
 
 fun ChoreEntity.schedule() = Schedule(
     mode = mode,

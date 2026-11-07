@@ -21,6 +21,21 @@ interface ChoreDao {
     @Query("SELECT * FROM completions WHERE choreId = :choreId ORDER BY doneDate DESC, id DESC")
     fun observeCompletions(choreId: Long): Flow<List<CompletionEntity>>
 
+    @Query(
+        """
+        SELECT completions.*, chores.name AS choreName
+        FROM completions JOIN chores ON chores.id = completions.choreId
+        ORDER BY completions.doneDate DESC, completions.id DESC
+        """,
+    )
+    fun observeAllCompletions(): Flow<List<CompletionWithName>>
+
+    @Query("SELECT * FROM completions WHERE choreId = :choreId ORDER BY doneDate DESC, id DESC LIMIT 1")
+    suspend fun getLatestCompletion(choreId: Long): CompletionEntity?
+
+    @Query("UPDATE completions SET doneDate = :doneDate WHERE id = :id")
+    suspend fun updateCompletionDate(id: Long, doneDate: LocalDate)
+
     @Query("SELECT DISTINCT choreId FROM completions WHERE doneDate = :date")
     fun observeChoreIdsDoneOn(date: LocalDate): Flow<List<Long>>
 

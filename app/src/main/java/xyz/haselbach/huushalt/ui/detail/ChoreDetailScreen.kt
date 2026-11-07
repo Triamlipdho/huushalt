@@ -1,5 +1,6 @@
 package xyz.haselbach.huushalt.ui.detail
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -57,8 +58,13 @@ fun ChoreDetailScreen(
     onEdit: () -> Unit,
     onComplete: () -> Unit,
     onPostpone: (LocalDate) -> Unit,
+    onChangeCompletionDate: (completionId: Long, LocalDate) -> Unit,
+    onDeleteCompletion: (completionId: Long) -> Unit,
+    /** Completions in a row done on time, or null when motivation is turned off (F7.3, F7.9). */
+    streak: Int? = null,
 ) {
     var showPostpone by rememberSaveable { mutableStateOf(false) }
+    var editingCompletionId by rememberSaveable { mutableStateOf<Long?>(null) }
 
     Scaffold(
         topBar = {
@@ -88,6 +94,13 @@ fun ChoreDetailScreen(
                         chore.lastDone?.formatLong() ?: stringResource(R.string.detail_never_done),
                     )
                     if (chore.notes.isNotBlank()) Fact(stringResource(R.string.detail_notes), chore.notes)
+                    if (streak != null && streak >= 2) {
+                        Text(
+                            stringResource(R.string.detail_chore_streak, streak),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
                 }
             }
             if (!chore.isFinished) {
@@ -121,9 +134,28 @@ fun ChoreDetailScreen(
                 }
             }
             items(completions, key = { it.id }) { completion ->
-                ListItem(headlineContent = { Text(completion.doneDate.formatLong()) })
+                ListItem(
+                    modifier = Modifier.clickable { editingCompletionId = completion.id },
+                    headlineContent = { Text(completion.doneDate.formatLong()) },
+                )
             }
         }
+    }
+
+    completions.find { it.id == editingCompletionId }?.let { completion ->
+        EditCompletionDialog(
+            completion = completion,
+            today = today,
+            onDismiss = { editingCompletionId = null },
+            onChangeDate = { date ->
+                editingCompletionId = null
+                onChangeCompletionDate(completion.id, date)
+            },
+            onDelete = {
+                editingCompletionId = null
+                onDeleteCompletion(completion.id)
+            },
+        )
     }
 
     if (showPostpone) {
@@ -163,6 +195,34 @@ private fun PostponeDialog(today: LocalDate, onDismiss: () -> Unit, onPick: (Loc
                 TextButton(onClick = { onPick(tomorrow) }) { Text(stringResource(R.string.postpone_tomorrow)) }
                 TextButton(onClick = { onPick(today.plusWeeks(1)) }) { Text(stringResource(R.string.postpone_next_week)) }
                 TextButton(onClick = { pickDate = true }) { Text(stringResource(R.string.postpone_pick_date)) }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
+}
+
+/** Change the date of a past completion or delete it (F6.4). */
+@Composable
+private fun EditCompletionDialog(
+    completion: CompletionEntity,
+    today: LocalDate,
+    onDismiss: () -> Unit,
+    onChangeDate: (LocalDate) -> Unit,
+    onDelete: () -> Unit,
+) {
+    var pickDate by rememberSaveable { mutableStateOf(false) }
+    if (pickDate) {
+        LocalDatePickerDialog(initial = completion.doneDate, latest = today, onDismiss = onDismiss, onConfirm = onChangeDate)
+        return
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.completion_title, completion.doneDate.formatLong())) },
+        text = {
+            Column {
+                TextButton(onClick = { pickDate = true }) { Text(stringResource(R.string.completion_change_date)) }
+                TextButton(onClick = onDelete) { Text(stringResource(R.string.completion_delete)) }
             }
         },
         confirmButton = {},

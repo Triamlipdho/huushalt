@@ -26,6 +26,8 @@ data class AppSettings(
     val permissionCardDismissed: Boolean = false,
     /** The system permission dialog was shown at least once. */
     val permissionRequested: Boolean = false,
+    /** Streaks and celebrations (F7.9). */
+    val motivationEnabled: Boolean = true,
 )
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -47,6 +49,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             prefs[EVENING_MINUTE] = new.reminders.eveningTime.toMinuteOfDay()
             prefs[PERMISSION_CARD_DISMISSED] = new.permissionCardDismissed
             prefs[PERMISSION_REQUESTED] = new.permissionRequested
+            prefs[MOTIVATION_ENABLED] = new.motivationEnabled
         }
     }
 
@@ -57,6 +60,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val EVENING_MINUTE = intPreferencesKey("reminders_evening_minute")
         val PERMISSION_CARD_DISMISSED = booleanPreferencesKey("permission_card_dismissed")
         val PERMISSION_REQUESTED = booleanPreferencesKey("permission_requested")
+        val MOTIVATION_ENABLED = booleanPreferencesKey("motivation_enabled")
 
         fun Preferences.toSettings(): AppSettings {
             val defaults = ReminderSettings()
@@ -69,6 +73,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
                 ),
                 permissionCardDismissed = this[PERMISSION_CARD_DISMISSED] ?: false,
                 permissionRequested = this[PERMISSION_REQUESTED] ?: false,
+                motivationEnabled = this[MOTIVATION_ENABLED] ?: true,
             )
         }
 

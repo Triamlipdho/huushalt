@@ -7,6 +7,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -44,6 +45,7 @@ import xyz.haselbach.huushalt.ui.detail.ChoreDetailScreen
 import xyz.haselbach.huushalt.ui.edit.ChoreEditScreen
 import xyz.haselbach.huushalt.ui.components.PermissionCard
 import xyz.haselbach.huushalt.ui.home.HomeScreen
+import xyz.haselbach.huushalt.ui.progress.ProgressScreen
 import xyz.haselbach.huushalt.ui.settings.SettingsScreen
 import xyz.haselbach.huushalt.ui.settings.SettingsViewModel
 import xyz.haselbach.huushalt.ui.settings.rememberNotificationAccess
@@ -52,7 +54,9 @@ import xyz.haselbach.huushalt.ui.settings.rememberNotificationAccess
 private object Route {
     const val TODAY = "today"
     const val ALL = "all"
+    const val PROGRESS = "progress"
     const val SETTINGS = "settings"
+    val tabs = setOf(TODAY, ALL, PROGRESS)
     fun detail(id: Long) = "detail:$id"
     fun edit(id: Long?) = "edit:${id ?: "new"}"
 }
@@ -72,6 +76,7 @@ fun HuushaltApp(
 
     val chores by viewModel.chores.collectAsStateWithLifecycle()
     val home by viewModel.home.collectAsStateWithLifecycle()
+    val progress by viewModel.progress.collectAsStateWithLifecycle()
     val today by viewModel.today.collectAsStateWithLifecycle()
     val stack = rememberSaveable(saver = stackSaver) { mutableStateListOf(Route.TODAY) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -100,15 +105,19 @@ fun HuushaltApp(
 
     // Snackbar "«Staubsaugen» erledigt – Rückgängig" after marking a chore done (F4.2).
     val completedText = stringResource(R.string.snackbar_completed)
+    val allDoneText = stringResource(R.string.celebration_all_done)
+    val motivationEnabled = settings?.motivationEnabled ?: true
     val undoText = stringResource(R.string.action_undo)
-    LaunchedEffect(viewModel) {
+    LaunchedEffect(viewModel, motivationEnabled) {
         viewModel.uiEvents.collect { event ->
             when (event) {
                 is UiEvent.Completed -> {
                     snackbarHostState.currentSnackbarData?.dismiss()
                     launch {
+                        // Celebrate the last chore of the day (F7.5).
+                        val message = if (event.allDoneToday && motivationEnabled) allDoneText else completedText.format(event.choreName)
                         val result = snackbarHostState.showSnackbar(
-                            message = completedText.format(event.choreName),
+                            message = message,
                             actionLabel = undoText,
                             duration = SnackbarDuration.Short,
                         )
@@ -122,6 +131,7 @@ fun HuushaltApp(
     val allChores = chores ?: return
     val homeState = home ?: return
     val appSettings = settings ?: return
+    val progressState = progress ?: return
 
     // Once everything is done, a reminder still showing is out of date.
     val context = LocalContext.current
@@ -131,7 +141,7 @@ fun HuushaltApp(
     val route = stack.last()
 
     when {
-        route == Route.TODAY || route == Route.ALL -> MainScaffold(
+        route in Route.tabs -> MainScaffold(
             tab = route,
             snackbarHostState = snackbarHostState,
             onSelectTab = { tab ->
@@ -151,6 +161,7 @@ fun HuushaltApp(
                     contentPadding = padding,
                     onOpen = { open(Route.detail(it.id)) },
                     onComplete = viewModel::complete,
+                    streak = progressState.streaks.current.takeIf { appSettings.motivationEnabled },
                     header = {
                         if (showPermissionCard) {
                             PermissionCard(
@@ -161,13 +172,20 @@ fun HuushaltApp(
                         }
                     },
                 )
-            } else {
+            } else if (route == Route.ALL) {
                 AllChoresScreen(
                     chores = allChores,
                     today = today,
                     contentPadding = padding,
                     onOpen = { open(Route.detail(it.id)) },
                     onComplete = viewModel::complete,
+                )
+            } else {
+                ProgressScreen(
+                    state = progressState,
+                    motivationEnabled = appSettings.motivationEnabled,
+                    contentPadding = padding,
+                    onOpenChore = { open(Route.detail(it)) },
                 )
             }
         }
@@ -190,6 +208,9 @@ fun HuushaltApp(
                 onEdit = { open(Route.edit(id)) },
                 onComplete = { viewModel.complete(chore) },
                 onPostpone = { viewModel.postpone(id, it) },
+                onChangeCompletionDate = viewModel::changeCompletionDate,
+                onDeleteCompletion = viewModel::deleteCompletion,
+                streak = progressState.choreStreaks[id].takeIf { appSettings.motivationEnabled },
             )
         }
 
@@ -220,6 +241,7 @@ fun HuushaltApp(
             access = notificationAccess,
             onBack = ::back,
             onChange = { change -> settingsViewModel.update { it.copy(reminders = change(it.reminders)) } },
+            onMotivationChange = { on -> settingsViewModel.update { it.copy(motivationEnabled = on) } },
         )
 
         else -> LaunchedEffect(route) { backToTab() }
@@ -239,7 +261,14 @@ private fun MainScaffold(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(if (tab == Route.TODAY) R.string.home_title else R.string.nav_all)) },
+                title = {
+                    val title = when (tab) {
+                        Route.TODAY -> R.string.home_title
+                        Route.ALL -> R.string.nav_all
+                        else -> R.string.nav_progress
+                    }
+                    Text(stringResource(title))
+                },
                 actions = {
                     IconButton(onClick = onSettings) {
                         Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings_title))
@@ -261,11 +290,19 @@ private fun MainScaffold(
                     icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
                     label = { Text(stringResource(R.string.nav_all)) },
                 )
+                NavigationBarItem(
+                    selected = tab == Route.PROGRESS,
+                    onClick = { onSelectTab(Route.PROGRESS) },
+                    icon = { Icon(Icons.Filled.Star, contentDescription = null) },
+                    label = { Text(stringResource(R.string.nav_progress)) },
+                )
             }
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAdd) {
-                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.action_add))
+            if (tab != Route.PROGRESS) {
+                FloatingActionButton(onClick = onAdd) {
+                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.action_add))
+                }
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },

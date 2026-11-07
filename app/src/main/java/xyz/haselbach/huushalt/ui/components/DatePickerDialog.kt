@@ -22,14 +22,17 @@ fun LocalDatePickerDialog(
     onDismiss: () -> Unit,
     onConfirm: (LocalDate) -> Unit,
     earliest: LocalDate? = null,
+    latest: LocalDate? = null,
 ) {
     val state = rememberDatePickerState(
         initialSelectedDateMillis = initial.toUtcMillis(),
         selectableDates = object : SelectableDates {
             override fun isSelectableDate(utcTimeMillis: Long) =
-                earliest == null || utcTimeMillis >= earliest.toUtcMillis()
+                (earliest == null || utcTimeMillis >= earliest.toUtcMillis()) &&
+                    (latest == null || utcTimeMillis <= latest.toUtcMillis())
 
-            override fun isSelectableYear(year: Int) = earliest == null || year >= earliest.year
+            override fun isSelectableYear(year: Int) =
+                (earliest == null || year >= earliest.year) && (latest == null || year <= latest.year)
         },
     )
     DatePickerDialog(

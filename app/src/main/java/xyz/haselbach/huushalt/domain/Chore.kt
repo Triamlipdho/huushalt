@@ -13,6 +13,8 @@ data class Chore(
     /** Next due date; null for a one-off chore that is done. */
     val dueDate: LocalDate?,
     val lastDone: LocalDate?,
+    /** Day the chore was created; streaks start with the first chore (F7.2). */
+    val createdDate: LocalDate = anchorDate,
 ) {
     val isFinished: Boolean get() = dueDate == null
 
