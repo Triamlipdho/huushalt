@@ -63,7 +63,11 @@ Releases are signed APKs published as GitHub releases and installed with
 
 ### Publishing a release
 
-Tag a commit on the main branch and push the tag:
+Either start it on GitHub (also works from the phone): *Actions → Release → Run workflow*, branch
+`main`, enter the version, e.g. `0.2.0`. The workflow creates the tag `v0.2.0` on the current
+commit of `main`.
+
+Or tag a commit on the main branch and push the tag:
 
 ```bash
 git tag v0.1.0
