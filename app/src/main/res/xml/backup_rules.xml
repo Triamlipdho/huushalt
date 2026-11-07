@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and older: back up all app data (F9.2). -->
+<full-backup-content />
