@@ -1,6 +1,6 @@
 # huushalt MVP feature list
 
-Status: draft, v0.2. More requirements will be added later (see [Decisions](#decisions) and [Open questions](#open-questions)).
+Status: draft, v0.3. All open questions from the first rounds are decided (see [Decisions](#decisions)). More requirements will be added later.
 
 ## Product vision
 
@@ -46,7 +46,7 @@ if time allows, **Could** = nice to have, likely after the MVP.
 | F1.5 | Pick an icon or colour for a chore | Could |
 | F1.6 | Estimated duration (e.g. 15 min), shown in the daily list | Could |
 | F1.7 | Optional checklist of sub-steps per chore (e.g. "Bad putzen" = Lavabo, WC, Dusche, Spiegel). Items are ticked off while doing the chore and reset for the next occurrence | Should |
-| F1.8 | Completing a chore with an unfinished checklist asks once whether to mark it done anyway | Should |
+| F1.8 | Completing a chore with an unfinished checklist asks once whether to mark it done anyway. Unticked items are not stored as done | Must (if F1.7 is built) |
 | F1.9 | Ticking the last checklist item marks the chore as done | Could |
 
 ### F2 Scheduling
@@ -121,7 +121,7 @@ nagging: no guilt messages, and a missed day doesn't wipe out everything.
 | ID | Feature | Priority |
 |---|---|---|
 | F7.1 | Daily progress on the home screen (e.g. "2 von 5 erledigt" with a progress ring) | Must |
-| F7.2 | "Alles erledigt" streak: number of days in a row with no overdue chores | Must |
+| F7.2 | "Alles erledigt" streak: number of days in a row where no chore is overdue at the end of the day. Days with nothing due count too | Must |
 | F7.3 | Per-chore streak: how many times in a row a chore was done on time | Should |
 | F7.4 | Statistics screen: chores done this week / month, on-time rate, trend compared with the previous period | Must |
 | F7.5 | Small celebration when the last chore of the day is done (animation / message) | Should |
@@ -174,11 +174,18 @@ nagging: no guilt messages, and a missed day doesn't wipe out everything.
 
 The app is for personal use. Recommendation:
 
-1. **Now: signed APK via GitHub Releases, installed and updated with [Obtainium](https://github.com/ImranR98/Obtainium).**
+Decided: **signed APK via GitHub Releases, installed and updated with [Obtainium](https://github.com/ImranR98/Obtainium).**
+The other options are kept below for reference.
+
+1. **Chosen: signed APK via GitHub Releases + Obtainium.**
    A GitHub Actions workflow builds and signs a release APK for every version tag. Obtainium
    watches the repository's releases and offers updates on the phone, so it feels like a store
-   without one. No fees, no review, releases in minutes. If the repository stays private,
-   Obtainium needs a GitHub access token with read access.
+   without one. No fees, no review, releases in minutes. The repository is private, so
+   Obtainium needs a fine-grained GitHub access token with read-only access to this
+   repository's contents.
+   - The signing key and its passwords are stored as GitHub Actions secrets and backed up
+     outside GitHub. Losing the key means updates can no longer be installed over the
+     existing app, so data would have to be exported and imported (F9.3).
 2. **Later, only if other people should use it: Google Play.** It costs a one-off USD 25, and new
    personal developer accounts must run a closed test with at least 12 testers for 14 days
    before publishing. That's a lot of overhead for an app with one user.
@@ -208,14 +215,15 @@ once as a developer even for sideloading.
 |---|---|---|
 | D1 | Home screen widget in the MVP? | No |
 | D2 | Motivation features? | Yes, see [F7](#f7-motivation) |
-| D3 | Distribution? | GitHub Releases + Obtainium, see [Distribution](#distribution) (recommendation, to confirm) |
+| D3 | Distribution? | GitHub Releases + Obtainium, see [Distribution](#distribution) |
+| D3a | Public or private repository? | Private |
 | D4 | Languages? | German only, Swiss spelling (ss instead of ß) |
 | D5 | Checklists / sub-steps? | Yes, optional per chore, see F1.7 to F1.9 |
 | D6 | Cloud backup beyond Android's automatic backup? | No |
 | D7 | Seasonal chores in the first release? | No |
+| D8 | Must every checklist item be ticked before a chore counts as done? | No. The app asks once and the chore can be marked done anyway (F1.8, now Must) |
+| D9 | Streak definition | A day counts towards the streak when no chore is overdue at the end of the day (F7.2) |
 
 ## Open questions
 
-1. Confirm distribution (D3): GitHub Releases + Obtainium, and should the repository be public or private?
-2. Checklists: must every item be ticked before a chore counts as done, or is "done anyway" (F1.8) fine?
-3. Motivation: which streak definition feels right, "no overdue chores" per day (F7.2) or something else?
+None right now. New requirements will be added here as they come up.
