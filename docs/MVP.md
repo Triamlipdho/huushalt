@@ -1,6 +1,6 @@
 # huushalt MVP feature list
 
-Status: draft, v0.1. More requirements will be added later (see [Open questions](#open-questions)).
+Status: draft, v0.2. More requirements will be added later (see [Decisions](#decisions) and [Open questions](#open-questions)).
 
 ## Product vision
 
@@ -45,6 +45,9 @@ if time allows, **Could** = nice to have, likely after the MVP.
 | F1.4 | Assign a chore to a room or area (kitchen, bathroom, ...), with editable list of rooms | Should |
 | F1.5 | Pick an icon or colour for a chore | Could |
 | F1.6 | Estimated duration (e.g. 15 min), shown in the daily list | Could |
+| F1.7 | Optional checklist of sub-steps per chore (e.g. "Bad putzen" = Lavabo, WC, Dusche, Spiegel). Items are ticked off while doing the chore and reset for the next occurrence | Should |
+| F1.8 | Completing a chore with an unfinished checklist asks once whether to mark it done anyway | Should |
+| F1.9 | Ticking the last checklist item marks the chore as done | Could |
 
 ### F2 Scheduling
 
@@ -64,7 +67,7 @@ Two scheduling modes are needed, because chores behave differently:
 | F2.4 | Monthly on a day of the month (with sensible handling of the 29th to 31st) | Must |
 | F2.5 | Choose fixed or flexible (after completion) mode per chore | Must |
 | F2.6 | Set the start / first due date | Must |
-| F2.7 | Yearly or seasonal chores (e.g. "clean windows every spring") | Should |
+| F2.7 | Seasonal chores (e.g. "clean windows every spring"). Plain yearly repeats are covered by F2.2 | Won't (after MVP) |
 | F2.8 | Chores without a date ("whenever I find time") in a backlog | Could |
 
 ### F3 Daily overview (home screen)
@@ -107,27 +110,44 @@ Two scheduling modes are needed, because chores behave differently:
 | F6.1 | Per-chore history: list of completion dates (Flatastic charges for this) | Must |
 | F6.2 | Show "last done" date on each chore | Must |
 | F6.3 | Global activity log of everything done, newest first | Should |
-| F6.4 | Simple statistics (done this week / month, on-time rate) | Could |
-| F6.5 | Streaks or other motivation features, replacing Flatastic's points | Could |
 
-### F7 First start
+### F7 Motivation
 
-| ID | Feature | Priority |
-|---|---|---|
-| F7.1 | App is usable immediately, no account or sign-up | Must |
-| F7.2 | Optional starter set: pick from a list of common chores with suggested intervals (vacuum weekly, change bed linen every 2 weeks, clean fridge monthly, ...) | Should |
-| F7.3 | Ask for notification permission (Android 13+) with a short explanation | Must |
-
-### F8 Data and settings
+Flatastic motivates through points compared between flatmates. With one person there is
+nobody to compare against, so huushalt motivates by comparing you with yourself: progress,
+streaks and a record of what you have achieved. Motivation must stay encouraging, never
+nagging: no guilt messages, and a missed day doesn't wipe out everything.
 
 | ID | Feature | Priority |
 |---|---|---|
-| F8.1 | All data stored locally on the device | Must |
-| F8.2 | Data is included in Android's automatic backup, so it survives a phone change | Must |
-| F8.3 | Manual export / import of all data as a file (JSON) | Should |
-| F8.4 | Settings: reminder time, first day of the week, theme (system / light / dark) | Must |
-| F8.5 | Languages: German and English, following the system language | Must |
-| F8.6 | Delete all data | Should |
+| F7.1 | Daily progress on the home screen (e.g. "2 von 5 erledigt" with a progress ring) | Must |
+| F7.2 | "Alles erledigt" streak: number of days in a row with no overdue chores | Must |
+| F7.3 | Per-chore streak: how many times in a row a chore was done on time | Should |
+| F7.4 | Statistics screen: chores done this week / month, on-time rate, trend compared with the previous period | Must |
+| F7.5 | Small celebration when the last chore of the day is done (animation / message) | Should |
+| F7.6 | Streak protection: postponing a chore (F4.4) before it is due does not break a streak; one "free day" per week | Should |
+| F7.7 | Milestones / badges (e.g. "100 chores done", "4 weeks without overdue chores") | Could |
+| F7.8 | Statistics per room (where do I spend my effort?) | Could |
+| F7.9 | Motivation features can be turned off in settings | Should |
+
+### F8 First start
+
+| ID | Feature | Priority |
+|---|---|---|
+| F8.1 | App is usable immediately, no account or sign-up | Must |
+| F8.2 | Optional starter set: pick from a list of common chores with suggested intervals (staubsaugen weekly, Bettwäsche wechseln every 2 weeks, Kühlschrank putzen monthly, ...) | Should |
+| F8.3 | Ask for notification permission (Android 13+) with a short explanation | Must |
+
+### F9 Data and settings
+
+| ID | Feature | Priority |
+|---|---|---|
+| F9.1 | All data stored locally on the device | Must |
+| F9.2 | Data is included in Android's automatic backup, so it survives a phone change. No other cloud backup | Must |
+| F9.3 | Manual export / import of all data as a file (JSON) | Should |
+| F9.4 | Settings: reminder time, first day of the week (default Monday), theme (system / light / dark) | Must |
+| F9.5 | Language: German only, Swiss spelling (ss instead of ß, e.g. "erledigt", "Strasse", "grüssen"); Swiss date format (07.11.2026) | Must |
+| F9.6 | Delete all data | Should |
 
 ## Non-functional requirements
 
@@ -141,31 +161,61 @@ Two scheduling modes are needed, because chores behave differently:
 | N6 | Accessible: works with TalkBack, supports large font sizes, touch targets at least 48 dp |
 | N7 | Due dates handle time zones and daylight saving time changes correctly (date-based, not timestamp-based) |
 | N8 | Reminders still arrive after a reboot and with battery optimisation on |
+| N9 | All UI text lives in string resources, so another language can be added later without code changes |
 
 ## Suggested tech stack (to confirm)
 
 - Kotlin, Jetpack Compose, Material 3
 - Room (SQLite) for local storage
 - WorkManager / AlarmManager for reminders
-- `java.time` for date logic, with unit tests for all recurrence rules
-- Distribution: Google Play and/or direct APK (to decide)
+- `java.time` for date logic, with unit tests for all recurrence and streak rules
+
+## Distribution
+
+The app is for personal use. Recommendation:
+
+1. **Now: signed APK via GitHub Releases, installed and updated with [Obtainium](https://github.com/ImranR98/Obtainium).**
+   A GitHub Actions workflow builds and signs a release APK for every version tag. Obtainium
+   watches the repository's releases and offers updates on the phone, so it feels like a store
+   without one. No fees, no review, releases in minutes. If the repository stays private,
+   Obtainium needs a GitHub access token with read access.
+2. **Later, only if other people should use it: Google Play.** It costs a one-off USD 25, and new
+   personal developer accounts must run a closed test with at least 12 testers for 14 days
+   before publishing. That's a lot of overhead for an app with one user.
+3. **Not recommended: F-Droid.** It requires the app to be open source, builds the app on its own
+   servers and updates arrive slowly. It's a good fit for public open-source apps, not for a
+   personal one.
+
+Note: Google is introducing developer verification for apps installed outside the Play Store
+on certified Android phones, starting with a few countries in 2026 and rolling out globally
+from 2027. Installing via `adb` stays possible, and Google has announced a free option for
+hobby developers. Check the current state before the first release; it may mean registering
+once as a developer even for sideloading.
 
 ## Explicitly not planned for the MVP
 
 - Shopping list, expenses, budgets
 - Multiple users, sharing, invites, chore rotation
-- Accounts, cloud sync, backend
+- Accounts, cloud sync, cloud backup, backend
 - iOS or web versions
-- Home screen widget, Wear OS (good candidates for after the MVP)
+- Home screen widget, Wear OS
+- Seasonal chores (F2.7)
+- English or other languages
+
+## Decisions
+
+| # | Question | Decision |
+|---|---|---|
+| D1 | Home screen widget in the MVP? | No |
+| D2 | Motivation features? | Yes, see [F7](#f7-motivation) |
+| D3 | Distribution? | GitHub Releases + Obtainium, see [Distribution](#distribution) (recommendation, to confirm) |
+| D4 | Languages? | German only, Swiss spelling (ss instead of ß) |
+| D5 | Checklists / sub-steps? | Yes, optional per chore, see F1.7 to F1.9 |
+| D6 | Cloud backup beyond Android's automatic backup? | No |
+| D7 | Seasonal chores in the first release? | No |
 
 ## Open questions
 
-To be worked out together before or during development:
-
-1. Is a home screen widget ("today's chores") important enough to move into the MVP?
-2. Should there be any motivation features (streaks, statistics), or should the app stay neutral?
-3. Distribution: Google Play, F-Droid, or only a personal APK?
-4. Languages: is German + English enough? Should UI text use Swiss German or Swiss Standard German spelling (ss instead of ß)?
-5. Should chores support checklists / sub-steps (e.g. "clean bathroom" = sink, toilet, shower)?
-6. Is cloud backup (e.g. to Google Drive) needed beyond Android's automatic backup?
-7. Should seasonal chores (F2.7) be in the first release?
+1. Confirm distribution (D3): GitHub Releases + Obtainium, and should the repository be public or private?
+2. Checklists: must every item be ticked before a chore counts as done, or is "done anyway" (F1.8) fine?
+3. Motivation: which streak definition feels right, "no overdue chores" per day (F7.2) or something else?
