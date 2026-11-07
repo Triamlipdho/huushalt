@@ -15,7 +15,9 @@ val appVersionCode = providers.environmentVariable("HUUSHALT_VERSION_CODE").orNu
 val keystoreFile = providers.environmentVariable("HUUSHALT_KEYSTORE_FILE").orNull
 val keystorePassword = providers.environmentVariable("HUUSHALT_KEYSTORE_PASSWORD").orNull
 val keyAliasName = providers.environmentVariable("HUUSHALT_KEY_ALIAS").orNull
-val keyPasswordValue = providers.environmentVariable("HUUSHALT_KEY_PASSWORD").orNull
+// PKCS12 keystores (the keytool default) use the keystore password for the key as well,
+// so the key password is optional.
+val keyPasswordValue = providers.environmentVariable("HUUSHALT_KEY_PASSWORD").orNull?.takeIf { it.isNotBlank() } ?: keystorePassword
 val hasReleaseSigning = listOf(keystoreFile, keystorePassword, keyAliasName, keyPasswordValue).all { !it.isNullOrBlank() }
 
 android {

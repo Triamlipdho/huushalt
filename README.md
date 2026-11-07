@@ -49,15 +49,15 @@ Releases are signed APKs published as GitHub releases and installed with
    base64 -w 0 huushalt-release.jks > huushalt-release.jks.base64
    ```
 
-3. In the repository on GitHub, go to *Settings → Secrets and variables → Actions* and add these
-   repository secrets:
+3. In the repository on GitHub, go to *Settings → Secrets and variables → Actions*, tab
+   **Secrets** (not *Variables*: variables are shown in plain text), and add these repository secrets:
 
    | Secret | Value |
    |---|---|
    | `HUUSHALT_KEYSTORE_BASE64` | Contents of `huushalt-release.jks.base64` |
    | `HUUSHALT_KEYSTORE_PASSWORD` | Keystore password |
    | `HUUSHALT_KEY_ALIAS` | `huushalt` (or the alias you chose) |
-   | `HUUSHALT_KEY_PASSWORD` | Key password |
+   | `HUUSHALT_KEY_PASSWORD` | Optional. Only needed if the key has its own password. keytool's default PKCS12 keystores use the keystore password for the key too, so leave it out |
 
 4. Delete `huushalt-release.jks.base64`. Never commit the keystore; `.gitignore` excludes `*.jks`.
 

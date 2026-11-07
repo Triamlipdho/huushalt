@@ -37,9 +37,9 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.HUUSHALT_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.HUUSHALT_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.HUUSHALT_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.HUUSHALT_KEY_PASSWORD }}
         run: |
-          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+          # HUUSHALT_KEY_PASSWORD is optional: it defaults to the keystore password.
+          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS; do
             if [ -z "${!name}" ]; then
               echo "::error::Repository secret HUUSHALT_$name is missing. See README, section Releases."
               exit 1
