@@ -1,6 +1,7 @@
 # huushalt MVP feature list
 
-Status: draft, v0.3. All open questions from the first rounds are decided (see [Decisions](#decisions)). More requirements will be added later.
+Status: draft, v0.4. Includes the comparison with Tody, Sweepy, Home Routines and Grocy
+(see [Decisions](#decisions)). More requirements will be added later.
 
 ## Product vision
 
@@ -33,7 +34,8 @@ chores part and designs it for one person.
 ## Feature list
 
 Priorities use MoSCoW: **Must** = required for the MVP release, **Should** = planned for the MVP
-if time allows, **Could** = nice to have, likely after the MVP.
+if time allows, **Could** = nice to have, not yet decided, **Later** = decided for after the MVP
+(see [After the MVP](#after-the-mvp)).
 
 ### F1 Chore management
 
@@ -48,6 +50,7 @@ if time allows, **Could** = nice to have, likely after the MVP.
 | F1.7 | Optional checklist of sub-steps per chore (e.g. "Bad putzen" = Lavabo, WC, Dusche, Spiegel). Items are ticked off while doing the chore and reset for the next occurrence | Should |
 | F1.8 | Completing a chore with an unfinished checklist asks once whether to mark it done anyway. Unticked items are not stored as done | Must (if F1.7 is built) |
 | F1.9 | Ticking the last checklist item marks the chore as done | Could |
+| F1.10 | Duplicate a chore (copy with all settings and checklist, without history) | Later |
 
 ### F2 Scheduling
 
@@ -67,8 +70,13 @@ Two scheduling modes are needed, because chores behave differently:
 | F2.4 | Monthly on a day of the month (with sensible handling of the 29th to 31st) | Must |
 | F2.5 | Choose fixed or flexible (after completion) mode per chore | Must |
 | F2.6 | Set the start / first due date | Must |
-| F2.7 | Seasonal chores (e.g. "clean windows every spring"). Plain yearly repeats are covered by F2.2 | Won't (after MVP) |
+| F2.7 | Seasonal chores (e.g. "clean windows every spring"). Plain yearly repeats are covered by F2.2 | Later |
 | F2.8 | Chores without a date ("whenever I find time") in a backlog | Could |
+| F2.9 | Every N weeks on selected weekdays, e.g. the Waschküche slot every 2nd Wednesday (combines F2.2 and F2.3) | Must |
+| F2.10 | Monthly on the nth weekday, e.g. "first Monday" or "last Friday of the month" | Should |
+| F2.11 | List of specific dates, e.g. paper and cardboard collection days from the Gemeinde's Abfallkalender. Dates can be added in bulk; the app reminds when the list is about to run out | Should |
+| F2.12 | Tolerance window per chore, e.g. "every 7 days, ±2 days is fine". Within the window the chore shows as "fällig", only after it as overdue. Default: no tolerance | Should |
+| F2.13 | Interval suggestion based on real behaviour, e.g. "You clean the fridge about every 3 weeks instead of every 4. Change it?" | Later |
 
 ### F3 Daily overview (home screen)
 
@@ -80,6 +88,8 @@ Two scheduling modes are needed, because chores behave differently:
 | F3.4 | List of all chores, sortable by name, next due date and room | Must |
 | F3.5 | Filter the overview by room | Should |
 | F3.6 | Calendar / week view of upcoming chores | Could |
+| F3.7 | Search chores by name, notes and checklist items | Later |
+| F3.8 | Sort chores manually (drag and drop) | Later |
 
 ### F4 Completing chores
 
@@ -91,6 +101,7 @@ Two scheduling modes are needed, because chores behave differently:
 | F4.4 | Postpone / snooze to tomorrow or a chosen date | Must |
 | F4.5 | Skip one occurrence without counting it as done | Should |
 | F4.6 | Add a short note when completing | Could |
+| F4.7 | Mark any chore as done at any time from the list of all chores (F3.4), also before it is due or when done spontaneously. Flexible chores: next due date counts from that day. Fixed chores: it counts for the next open occurrence | Must |
 
 ### F5 Reminders
 
@@ -102,6 +113,7 @@ Two scheduling modes are needed, because chores behave differently:
 | F5.4 | Mark as done directly from the notification | Should |
 | F5.5 | Per-chore reminder at a specific time | Could |
 | F5.6 | Quiet days (e.g. no reminders on Sunday) | Could |
+| F5.7 | Evening reminder at a second time I choose (e.g. 19:00), only if chores due today are still open. Can be turned off | Should |
 
 ### F6 History
 
@@ -110,6 +122,7 @@ Two scheduling modes are needed, because chores behave differently:
 | F6.1 | Per-chore history: list of completion dates (Flatastic charges for this) | Must |
 | F6.2 | Show "last done" date on each chore | Must |
 | F6.3 | Global activity log of everything done, newest first | Should |
+| F6.4 | Edit the date of a past completion or delete it. Due dates, statistics and streaks are recalculated | Should |
 
 ### F7 Motivation
 
@@ -122,7 +135,7 @@ nagging: no guilt messages, and a missed day doesn't wipe out everything.
 |---|---|---|
 | F7.1 | Daily progress on the home screen (e.g. "2 von 5 erledigt" with a progress ring) | Must |
 | F7.2 | "Alles erledigt" streak: number of days in a row where no chore is overdue at the end of the day. Days with nothing due count too | Must |
-| F7.3 | Per-chore streak: how many times in a row a chore was done on time | Should |
+| F7.3 | Per-chore streak: how many times in a row a chore was done on time ("on time" = by the due date plus its tolerance, F2.12) | Should |
 | F7.4 | Statistics screen: chores done this week / month, on-time rate, trend compared with the previous period | Must |
 | F7.5 | Small celebration when the last chore of the day is done (animation / message) | Should |
 | F7.6 | Streak protection: postponing a chore (F4.4) before it is due does not break a streak; one "free day" per week | Should |
@@ -137,6 +150,7 @@ nagging: no guilt messages, and a missed day doesn't wipe out everything.
 | F8.1 | App is usable immediately, no account or sign-up | Must |
 | F8.2 | Optional starter set: pick from a list of common chores with suggested intervals (staubsaugen weekly, Bettwäsche wechseln every 2 weeks, Kühlschrank putzen monthly, ...) | Should |
 | F8.3 | Ask for notification permission (Android 13+) with a short explanation | Must |
+| F8.4 | Upkeep chores with long intervals in the starter set: Wasserkocher entkalken, Geschirrspüler-Filter reinigen, Waschmaschine reinigen, Dampfabzug-Filter, Rauchmelder testen, Tiefkühler abtauen | Later |
 
 ### F9 Data and settings
 
@@ -148,6 +162,30 @@ nagging: no guilt messages, and a missed day doesn't wipe out everything.
 | F9.4 | Settings: reminder time, first day of the week (default Monday), theme (system / light / dark) | Must |
 | F9.5 | Language: German only, Swiss spelling (ss instead of ß, e.g. "erledigt", "Strasse", "grüssen"); Swiss date format (07.11.2026) | Must |
 | F9.6 | Delete all data | Should |
+| F9.7 | App shortcut: long-press the app icon to get "Neue Aufgabe" and "Heute" | Later |
+
+### F10 Holidays and catching up
+
+In a shared flat someone else does the chores while you're away. Alone, nobody does, and
+coming back to a wall of overdue chores is the fastest way to give up on the app.
+
+| ID | Feature | Priority |
+|---|---|---|
+| F10.1 | Holiday mode: pause everything from date A to date B. No reminders during that time | Must |
+| F10.2 | After a holiday, flexible chores are shifted by the length of the holiday. Occurrences of fixed chores that fell inside the holiday are dropped; the chore continues with its next regular date | Must |
+| F10.3 | Holiday days don't break the "Alles erledigt" streak (F7.2) or per-chore streaks (F7.3); they are neutral | Must |
+| F10.4 | End a holiday early or extend it | Must |
+| F10.5 | A fixed chore that was missed several times shows up once as overdue (with "3× verpasst"), not as three separate entries | Must |
+| F10.6 | "Neu planen ab heute": one action for all overdue chores. Flexible chores get their next due date counted from today, fixed chores jump to their next regular date. Nothing is logged as done | Must |
+
+### F11 Planning aids (after the MVP)
+
+| ID | Feature | Priority |
+|---|---|---|
+| F11.1 | Effort per chore (leicht / mittel / streng) and a daily effort budget. Flexible chores are spread so no day is overloaded | Later |
+| F11.2 | Fixed rest days (e.g. Sunday) on which flexible chores are not scheduled | Later |
+| F11.3 | Timer: "15 Minuten putzen", optionally with a chore or room | Later |
+| F11.4 | "Nur eine Sache" mode: show only the next chore, nothing else | Later |
 
 ## Non-functional requirements
 
@@ -206,8 +244,23 @@ once as a developer even for sideloading.
 - Accounts, cloud sync, cloud backup, backend
 - iOS or web versions
 - Home screen widget, Wear OS
-- Seasonal chores (F2.7)
 - English or other languages
+- Dirtiness levels per room and a mascot (as in Tody): more complexity, little benefit
+- Photos, e.g. before / after
+- Calendar export (ICS): maybe later
+- Shopping list for cleaning supplies: that's a shopping list
+
+## After the MVP
+
+Decided for a later release (priority **Later** in the tables above):
+
+- F1.10 Duplicate a chore
+- F2.7 Seasonal chores
+- F2.13 Interval suggestions based on real behaviour
+- F3.7 Search, F3.8 manual sorting
+- F8.4 Upkeep chores in the starter set
+- F9.7 App shortcut
+- F11 Planning aids: effort budget, rest days, timer, "Nur eine Sache" mode
 
 ## Decisions
 
@@ -223,6 +276,8 @@ once as a developer even for sideloading.
 | D7 | Seasonal chores in the first release? | No |
 | D8 | Must every checklist item be ticked before a chore counts as done? | No. The app asks once and the chore can be marked done anyway (F1.8, now Must) |
 | D9 | Streak definition | A day counts towards the streak when no chore is overdue at the end of the day (F7.2) |
+| D10 | Additions to the MVP from the comparison with Tody, Sweepy, Home Routines and Grocy | Holiday mode and catching up (F10), completing any chore at any time (F4.7), new repeat options (F2.9 to F2.11), tolerance window (F2.12), correcting past completions (F6.4), evening reminder (F5.7) |
+| D11 | Additions for after the MVP | See [After the MVP](#after-the-mvp) |
 
 ## Open questions
 
