@@ -1,4 +1,4 @@
-package ch.huushalt.ui
+package xyz.haselbach.huushalt.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,8 +16,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import ch.huushalt.R
-import ch.huushalt.ui.theme.HuushaltTheme
+import xyz.haselbach.huushalt.R
+import xyz.haselbach.huushalt.ui.theme.HuushaltTheme
 
 /**
  * Placeholder for the daily overview (F3). For now it only shows the empty state (F3.3).

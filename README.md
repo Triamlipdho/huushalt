@@ -12,7 +12,7 @@ It deliberately does one thing, chores, and does it without accounts, flatmates 
 - Kotlin, Jetpack Compose, Material 3
 - Android 8.0 (API 26) and newer, compiled against API 36
 - Gradle with a version catalog (`gradle/libs.versions.toml`); Dependabot keeps versions up to date
-- Package name `ch.huushalt` (debug builds: `ch.huushalt.debug`, so both can be installed side by side)
+- Package name `xyz.haselbach.huushalt` (debug builds: `xyz.haselbach.huushalt.debug`, so both can be installed side by side)
 
 ## Development
 

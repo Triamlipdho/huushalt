@@ -21,11 +21,11 @@ val keyPasswordValue = providers.environmentVariable("HUUSHALT_KEY_PASSWORD").or
 val hasReleaseSigning = listOf(keystoreFile, keystorePassword, keyAliasName, keyPasswordValue).all { !it.isNullOrBlank() }
 
 android {
-    namespace = "ch.huushalt"
+    namespace = "xyz.haselbach.huushalt"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "ch.huushalt"
+        applicationId = "xyz.haselbach.huushalt"
         minSdk = 26
         targetSdk = 36
         versionCode = appVersionCode

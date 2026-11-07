@@ -1,4 +1,4 @@
-package ch.huushalt.ui.theme
+package xyz.haselbach.huushalt.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
