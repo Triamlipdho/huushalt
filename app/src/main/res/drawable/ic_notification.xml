@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Notification icon: the launcher house with a check mark cut out, single colour. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M12,2.5L22,11L19.5,11L19.5,21L4.5,21L4.5,11L2,11Z M8.2,14.6L7,15.8L10.4,19.2L17,12.6L15.8,11.4L10.4,16.8Z" />
+</vector>
