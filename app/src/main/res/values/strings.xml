@@ -120,4 +120,41 @@
     <string name="edit_error_weekday">Bitte mindestens einen Tag wählen.</string>
     <string name="delete_title">«%s» löschen?</string>
     <string name="delete_body">Der Verlauf wird ebenfalls gelöscht.</string>
+
+    <!-- Reminders (F5) -->
+    <string name="notification_channel_name">Erinnerungen</string>
+    <string name="notification_channel_description">Tägliche Übersicht und Abend-Erinnerung</string>
+    <plurals name="notification_morning_title_today">
+        <item quantity="one">%d Aufgabe heute</item>
+        <item quantity="other">%d Aufgaben heute</item>
+    </plurals>
+    <plurals name="notification_morning_title_overdue">
+        <item quantity="one">%d Aufgabe überfällig</item>
+        <item quantity="other">%d Aufgaben überfällig</item>
+    </plurals>
+    <string name="notification_morning_title_mixed" tools:ignore="PluralsCandidate">%1$d heute fällig, %2$d überfällig</string>
+    <plurals name="notification_evening_title">
+        <item quantity="one">Noch %d Aufgabe offen</item>
+        <item quantity="other">Noch %d Aufgaben offen</item>
+    </plurals>
+    <string name="notification_more" tools:ignore="PluralsCandidate">+%d weitere</string>
+
+    <!-- Notification permission (F8.3) -->
+    <string name="permission_card_title">Erinnerungen erlauben?</string>
+    <string name="permission_card_body">huushalt erinnert dich am Morgen an fällige Aufgaben und am Abend, falls noch etwas offen ist. Dafür braucht die App die Erlaubnis für Mitteilungen.</string>
+    <string name="permission_allow">Erlauben</string>
+    <string name="permission_not_now">Nicht jetzt</string>
+    <string name="permission_open_settings">Einstellungen öffnen</string>
+
+    <!-- Settings (F5.2, F9.4) -->
+    <string name="settings_title">Einstellungen</string>
+    <string name="settings_reminders">Erinnerungen</string>
+    <string name="settings_reminders_summary">Tägliche Übersicht und Abend-Erinnerung</string>
+    <string name="settings_morning">Tägliche Übersicht</string>
+    <string name="settings_morning_summary">Um %s, wenn etwas fällig ist</string>
+    <string name="settings_evening">Abend-Erinnerung</string>
+    <string name="settings_evening_summary">Um %s, nur wenn noch etwas offen ist</string>
+    <string name="settings_pick_time">Zeit wählen</string>
+    <string name="settings_notifications_blocked">Mitteilungen sind für huushalt ausgeschaltet. Ohne sie gibt es keine Erinnerungen.</string>
+    <string name="settings_timing_note">Erinnerungen kommen auf ein paar Minuten genau, damit der Akku geschont wird.</string>
 </resources>

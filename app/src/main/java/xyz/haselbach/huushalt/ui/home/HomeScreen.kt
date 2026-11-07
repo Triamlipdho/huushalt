@@ -31,8 +31,10 @@ fun HomeScreen(
     contentPadding: PaddingValues,
     onOpen: (Chore) -> Unit,
     onComplete: (Chore) -> Unit,
+    header: @Composable () -> Unit = {},
 ) {
     LazyColumn(contentPadding = contentPadding) {
+        item(key = "header") { header() }
         item(key = "progress") { Progress(state) }
         when {
             !state.hasChores -> item(key = "empty") {

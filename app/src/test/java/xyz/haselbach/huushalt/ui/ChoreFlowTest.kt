@@ -1,7 +1,5 @@
 package xyz.haselbach.huushalt.ui
 
-import android.graphics.Bitmap
-import android.graphics.Canvas
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -9,7 +7,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import java.io.File
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -17,6 +15,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import xyz.haselbach.huushalt.MainActivity
+import xyz.haselbach.huushalt.testing.resetSettings
+import xyz.haselbach.huushalt.testing.screenshot
 
 /**
  * End-to-end flow on the JVM: create a chore, mark it done, undo (F1.1, F3.1, F4.1, F4.2, F7.1).
@@ -30,6 +30,9 @@ class ChoreFlowTest {
 
     @get:Rule
     val compose = createAndroidComposeRule<MainActivity>()
+
+    @Before
+    fun setUp() = resetSettings()
 
     @Test
     fun createCompleteAndUndo() {
@@ -79,13 +82,5 @@ class ChoreFlowTest {
         compose.waitUntilAtLeastOneExists(hasText(text), timeoutMillis = 5_000)
     }
 
-    private fun screenshot(name: String) {
-        compose.waitForIdle()
-        val dir = File("build/screenshots").apply { mkdirs() }
-        // Draw the window directly; captureToImage() waits for a frame Robolectric doesn't deliver.
-        val view = compose.activity.window.decorView
-        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
-        compose.runOnUiThread { view.draw(Canvas(bitmap)) }
-        File(dir, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-    }
+    private fun screenshot(name: String) = compose.screenshot(name)
 }
