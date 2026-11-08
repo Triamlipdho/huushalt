@@ -61,8 +61,9 @@ class ReminderNotifier(private val context: Context) {
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
 
-        // Mark done from the notification when it is about exactly one chore (F5.4).
-        open.all.singleOrNull()?.let { chore ->
+        // Mark done from the notification when it is about exactly one chore (F5.4). Not with an
+        // unfinished checklist: that needs the "done anyway?" question in the app (F1.8).
+        open.all.singleOrNull()?.takeIf { !it.checklistUnfinished }?.let { chore ->
             builder.addAction(0, context.getString(R.string.action_complete), completeIntent(chore.id))
         }
 

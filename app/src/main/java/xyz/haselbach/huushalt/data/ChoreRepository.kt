@@ -4,6 +4,8 @@ import androidx.room.withTransaction
 import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import xyz.haselbach.huushalt.domain.Area
+import xyz.haselbach.huushalt.domain.ChecklistItem
 import xyz.haselbach.huushalt.domain.Chore
 import xyz.haselbach.huushalt.domain.Holiday
 import xyz.haselbach.huushalt.domain.HolidayRules
@@ -37,7 +39,16 @@ class ChoreRepository(
      * Creates a chore (id null) or updates one. [nextDue] is the date picked in the editor; it
      * becomes the anchor of a fixed schedule, and the due date is recalculated from it.
      */
-    suspend fun save(id: Long?, name: String, notes: String, schedule: Schedule, nextDue: LocalDate): Long {
+    suspend fun save(
+        id: Long?,
+        name: String,
+        notes: String,
+        schedule: Schedule,
+        nextDue: LocalDate,
+        areaId: Long? = null,
+        /** Checklist in order; items with an id are kept (with their ticks), others are new (F1.7). */
+        checklist: List<ChecklistDraft>? = null,
+    ): Long {
         val normalized = normalize(schedule, nextDue)
         val entity = ChoreEntity(
             id = id ?: 0,
@@ -51,16 +62,60 @@ class ChoreRepository(
             anchorDate = nextDue,
             dueDate = ScheduleCalculator.initialDueDate(normalized, nextDue),
             createdAt = now(),
+            areaId = areaId,
         )
         return db.withTransaction {
-            if (id == null) {
+            val choreId = if (id == null) {
                 dao.insertChore(entity)
             } else {
                 val existing = dao.getChore(id) ?: return@withTransaction id
-                dao.updateChore(entity.copy(createdAt = existing.createdAt))
+                dao.updateChore(entity.copy(createdAt = existing.createdAt, paused = existing.paused))
                 id
             }
+            if (checklist != null) saveChecklist(choreId, checklist)
+            choreId
         }
+    }
+
+    private suspend fun saveChecklist(choreId: Long, drafts: List<ChecklistDraft>) {
+        val existing = dao.getChecklist(choreId).associateBy { it.id }
+        val keep = drafts.mapNotNull { it.id }.toSet()
+        existing.keys.filter { it !in keep }.forEach { dao.deleteChecklistItem(it) }
+        drafts.filter { it.text.isNotBlank() }.forEachIndexed { position, draft ->
+            val old = draft.id?.let { existing[it] }
+            if (old != null) {
+                dao.updateChecklistItem(old.copy(text = draft.text.trim(), position = position))
+            } else {
+                dao.insertChecklistItem(ChecklistItemEntity(choreId = choreId, text = draft.text.trim(), position = position, checked = false))
+            }
+        }
+        // Items emptied in the editor are removed.
+        drafts.filter { it.text.isBlank() && it.id != null }.forEach { dao.deleteChecklistItem(it.id!!) }
+    }
+
+    fun checklist(choreId: Long): Flow<List<ChecklistItem>> = dao.observeChecklist(choreId).map { list -> list.map { it.toDomain() } }
+
+    suspend fun setChecked(itemId: Long, checked: Boolean) = dao.setChecklistItemChecked(itemId, checked)
+
+    // Areas (F1.4)
+
+    val areas: Flow<List<Area>> = dao.observeAreas().map { list -> list.map { it.toDomain() } }
+
+    suspend fun addArea(name: String): Long = dao.insertArea(AreaEntity(name = name.trim()))
+
+    suspend fun renameArea(id: Long, name: String) = dao.renameArea(id, name.trim())
+
+    /** Chores in the room keep existing, without a room. */
+    suspend fun deleteArea(id: Long) = dao.deleteArea(id)
+
+    /**
+     * Pauses or resumes a chore (F1.3). Paused chores are not due and don't count for streaks;
+     * a chore resumed after its due date is due today, without counting the pause as missed.
+     */
+    suspend fun setPaused(choreId: Long, paused: Boolean, today: LocalDate = LocalDate.now()) = db.withTransaction {
+        val chore = dao.getChore(choreId) ?: return@withTransaction
+        dao.updatePaused(choreId, paused)
+        if (!paused && chore.dueDate != null && chore.dueDate < today) dao.updateDueDate(choreId, today)
     }
 
     /** Marks a chore as done on [doneDate]. Returns the id of the new completion, for undo. */
@@ -71,6 +126,8 @@ class ChoreRepository(
             CompletionEntity(choreId = choreId, doneDate = doneDate, previousDueDate = chore.dueDate, createdAt = now()),
         )
         dao.updateDueDate(choreId, nextDue)
+        // The checklist starts fresh for the next time (F1.7).
+        dao.resetChecklist(choreId)
         completionId
     }
 
@@ -125,7 +182,7 @@ class ChoreRepository(
     /** "Neu planen ab heute" (F10.6): moves all overdue chores without marking them done. */
     suspend fun rescheduleOverdue(today: LocalDate = LocalDate.now()) = db.withTransaction {
         dao.getChores().map { it.toDomain() to it.chore }
-            .filter { (chore, _) -> chore.dueDate != null && chore.dueDate < today }
+            .filter { (chore, _) -> !chore.paused && chore.dueDate != null && chore.dueDate < today }
             .forEach { (chore, entity) ->
                 recordMissed(entity, today)
                 dao.updateDueDate(chore.id, HolidayRules.dueDateWhenRescheduled(chore, today))
@@ -192,3 +249,6 @@ class ChoreRepository(
         else -> schedule.copy(weekdays = emptySet(), dayOfMonth = null)
     }
 }
+
+/** A checklist item as edited in the editor: [id] null for new items. */
+data class ChecklistDraft(val id: Long?, val text: String)

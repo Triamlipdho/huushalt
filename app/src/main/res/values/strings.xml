@@ -35,6 +35,7 @@
     <string name="due_tomorrow">Morgen</string>
     <string name="due_on">Fällig am %s</string>
     <string name="due_finished">Erledigt</string>
+    <string name="due_paused">Pausiert</string>
 
     <!-- Schedule descriptions -->
     <string name="schedule_once">Einmalig</string>
@@ -213,4 +214,40 @@
     <string name="reschedule_action">Neu planen</string>
     <string name="reschedule_title">Ab heute neu planen?</string>
     <string name="reschedule_body">Alle überfälligen Aufgaben bekommen ein neues Datum: Aufgaben «Nach dem Erledigen» zählen ab heute, Aufgaben «Nach festem Plan» springen zum nächsten Termin. Nichts wird als erledigt gespeichert.</string>
+
+    <!-- Rooms (F1.4, F3.5) -->
+    <string name="area">Raum</string>
+    <string name="area_none">Kein Raum</string>
+    <string name="area_new">Neuer Raum …</string>
+    <string name="area_new_title">Neuer Raum</string>
+    <string name="area_name">Name des Raums</string>
+    <string name="area_name_hint">z. B. Küche</string>
+    <string name="areas_title">Räume</string>
+    <string name="areas_summary">Aufgaben nach Räumen ordnen und filtern</string>
+    <string name="areas_empty">Noch keine Räume. Du kannst sie auch direkt beim Erfassen einer Aufgabe anlegen.</string>
+    <string name="area_add">Raum hinzufügen</string>
+    <string name="area_rename_description">«%s» umbenennen</string>
+    <string name="area_delete_description">«%s» löschen</string>
+    <string name="area_delete_title">Raum «%s» löschen?</string>
+    <string name="area_delete_body">Die Aufgaben bleiben erhalten, nur ohne Raum.</string>
+    <string name="filter_all">Alle</string>
+    <string name="all_sort_area">Nach Raum</string>
+    <string name="all_section_paused">Pausiert</string>
+    <string name="all_section_no_area">Ohne Raum</string>
+
+    <!-- Pausing (F1.3) -->
+    <string name="action_pause">Pausieren</string>
+    <string name="action_resume">Fortsetzen</string>
+    <string name="detail_paused">Diese Aufgabe ist pausiert. Sie wird nicht fällig und zählt nicht für deine Serien.</string>
+
+    <!-- Checklists (F1.7, F1.8) -->
+    <string name="checklist">Checkliste</string>
+    <string name="checklist_progress">%1$d/%2$d</string>
+    <string name="checklist_add">Punkt hinzufügen</string>
+    <string name="checklist_item_hint">z. B. Lavabo</string>
+    <string name="checklist_remove">Punkt entfernen</string>
+    <string name="checklist_optional">Optional: Teilschritte, die du beim Erledigen abhaken kannst.</string>
+    <string name="checklist_unfinished_title">Checkliste nicht fertig</string>
+    <string name="checklist_unfinished_body">Noch nicht alle Punkte von «%s» sind abgehakt. Trotzdem als erledigt markieren?</string>
+    <string name="checklist_done_anyway">Trotzdem erledigt</string>
 </resources>

@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -20,11 +21,14 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -36,10 +40,12 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import xyz.haselbach.huushalt.HuushaltApplication
 import xyz.haselbach.huushalt.R
+import xyz.haselbach.huushalt.domain.Chore
+import xyz.haselbach.huushalt.ui.areas.AreasScreen
 import xyz.haselbach.huushalt.ui.chores.AllChoresScreen
 import xyz.haselbach.huushalt.ui.detail.ChoreDetailScreen
 import xyz.haselbach.huushalt.ui.edit.ChoreEditScreen
@@ -58,6 +64,7 @@ private object Route {
     const val PROGRESS = "progress"
     const val SETTINGS = "settings"
     const val HOLIDAY = "holiday"
+    const val AREAS = "areas"
     val tabs = setOf(TODAY, ALL, PROGRESS)
     fun detail(id: Long) = "detail:$id"
     fun edit(id: Long?) = "edit:${id ?: "new"}"
@@ -79,6 +86,9 @@ fun HuushaltApp(
     val chores by viewModel.chores.collectAsStateWithLifecycle()
     val home by viewModel.home.collectAsStateWithLifecycle()
     val progress by viewModel.progress.collectAsStateWithLifecycle()
+    val areas by viewModel.areas.collectAsStateWithLifecycle()
+    // A chore with an unfinished checklist waiting for "Trotzdem erledigt?" (F1.8).
+    var confirmCompleteId by rememberSaveable { mutableStateOf<Long?>(null) }
     val today by viewModel.today.collectAsStateWithLifecycle()
     val stack = rememberSaveable(saver = stackSaver) { mutableStateListOf(Route.TODAY) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -134,6 +144,26 @@ fun HuushaltApp(
     val homeState = home ?: return
     val appSettings = settings ?: return
     val progressState = progress ?: return
+    val allAreas = areas ?: return
+
+    fun complete(chore: Chore) {
+        if (chore.checklistUnfinished) confirmCompleteId = chore.id else viewModel.complete(chore)
+    }
+
+    allChores.find { it.id == confirmCompleteId }?.let { chore ->
+        AlertDialog(
+            onDismissRequest = { confirmCompleteId = null },
+            title = { Text(stringResource(R.string.checklist_unfinished_title)) },
+            text = { Text(stringResource(R.string.checklist_unfinished_body, chore.name)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmCompleteId = null
+                    viewModel.complete(chore)
+                }) { Text(stringResource(R.string.checklist_done_anyway)) }
+            },
+            dismissButton = { TextButton(onClick = { confirmCompleteId = null }) { Text(stringResource(R.string.action_cancel)) } },
+        )
+    }
 
     // Once everything is done, a reminder still showing is out of date.
     val context = LocalContext.current
@@ -162,11 +192,12 @@ fun HuushaltApp(
                     state = homeState,
                     contentPadding = padding,
                     onOpen = { open(Route.detail(it.id)) },
-                    onComplete = viewModel::complete,
+                    onComplete = ::complete,
                     streak = progressState.streaks.current.takeIf { appSettings.motivationEnabled },
                     onReschedule = viewModel::rescheduleOverdue,
                     onEndHoliday = { viewModel.endHoliday(it.id) },
                     onChangeHoliday = { open(Route.HOLIDAY) },
+                    areas = allAreas,
                     header = {
                         if (showPermissionCard) {
                             PermissionCard(
@@ -183,7 +214,7 @@ fun HuushaltApp(
                     today = today,
                     contentPadding = padding,
                     onOpen = { open(Route.detail(it.id)) },
-                    onComplete = viewModel::complete,
+                    onComplete = ::complete,
                 )
             } else {
                 ProgressScreen(
@@ -204,6 +235,7 @@ fun HuushaltApp(
                 return
             }
             val completions by remember(id) { viewModel.completions(id) }.collectAsStateWithLifecycle(emptyList())
+            val checklist by remember(id) { viewModel.checklist(id) }.collectAsStateWithLifecycle(emptyList())
             ChoreDetailScreen(
                 chore = chore,
                 completions = completions,
@@ -211,11 +243,14 @@ fun HuushaltApp(
                 snackbarHostState = snackbarHostState,
                 onBack = ::back,
                 onEdit = { open(Route.edit(id)) },
-                onComplete = { viewModel.complete(chore) },
+                onComplete = { complete(chore) },
                 onPostpone = { viewModel.postpone(id, it) },
                 onChangeCompletionDate = viewModel::changeCompletionDate,
                 onDeleteCompletion = viewModel::deleteCompletion,
                 streak = progressState.choreStreaks[id].takeIf { appSettings.motivationEnabled },
+                checklist = checklist,
+                onToggleItem = { viewModel.setChecked(it.id, !it.checked) },
+                onPausedChange = { viewModel.setPaused(id, it) },
             )
         }
 
@@ -226,12 +261,27 @@ fun HuushaltApp(
                 LaunchedEffect(route) { back() }
                 return
             }
+            // The checklist must be loaded before the editor starts, it initialises its fields once.
+            val checklist by remember(id) { id?.let { viewModel.checklist(it) } ?: flowOf(emptyList()) }
+                .collectAsStateWithLifecycle(null)
+            val initialChecklist = checklist ?: return
             ChoreEditScreen(
                 chore = chore,
                 today = today,
+                areas = allAreas,
+                initialChecklist = initialChecklist,
                 onClose = ::back,
-                onSave = { name, notes, schedule, nextDue ->
-                    viewModel.save(id, name, notes, schedule, nextDue)
+                onSave = { draft ->
+                    viewModel.save(
+                        id,
+                        draft.name,
+                        draft.notes,
+                        draft.schedule,
+                        draft.nextDue,
+                        draft.areaId,
+                        draft.checklist,
+                        draft.newAreaName,
+                    )
                     back()
                 },
                 onDelete = {
@@ -249,6 +299,15 @@ fun HuushaltApp(
             onMotivationChange = { on -> settingsViewModel.update { it.copy(motivationEnabled = on) } },
             holiday = homeState.activeHoliday ?: homeState.plannedHoliday,
             onOpenHoliday = { open(Route.HOLIDAY) },
+            onOpenAreas = { open(Route.AREAS) },
+        )
+
+        route == Route.AREAS -> AreasScreen(
+            areas = allAreas,
+            onBack = ::back,
+            onAdd = viewModel::addArea,
+            onRename = viewModel::renameArea,
+            onDelete = viewModel::deleteArea,
         )
 
         route == Route.HOLIDAY -> {

@@ -20,10 +20,13 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import xyz.haselbach.huushalt.HuushaltApplication
+import xyz.haselbach.huushalt.data.ChecklistDraft
 import xyz.haselbach.huushalt.data.ChoreRepository
 import xyz.haselbach.huushalt.data.CompletionEntity
 import xyz.haselbach.huushalt.data.CompletionWithName
 import xyz.haselbach.huushalt.data.toRecord
+import xyz.haselbach.huushalt.domain.Area
+import xyz.haselbach.huushalt.domain.ChecklistItem
 import xyz.haselbach.huushalt.domain.Chore
 import xyz.haselbach.huushalt.domain.DueStatus
 import xyz.haselbach.huushalt.domain.Holiday
@@ -110,7 +113,13 @@ class ChoresViewModel(private val repository: ChoreRepository) : ViewModel() {
                 Streaks(0, 0)
             } else {
                 Progress.streaks(
-                    overdueDays = Progress.overdueDays(records, chores.mapNotNull { it.dueDate }, start, today, missed),
+                    overdueDays = Progress.overdueDays(
+                        records,
+                        chores.filterNot { it.paused }.mapNotNull { it.dueDate },
+                        start,
+                        today,
+                        missed,
+                    ),
                     start = start,
                     today = today,
                     todayClean = OpenChores.of(chores, today).isEmpty,
@@ -156,6 +165,30 @@ class ChoresViewModel(private val repository: ChoreRepository) : ViewModel() {
 
     fun completions(choreId: Long): Flow<List<CompletionEntity>> = repository.completions(choreId)
 
+    fun checklist(choreId: Long): Flow<List<ChecklistItem>> = repository.checklist(choreId)
+
+    val areas: StateFlow<List<Area>?> = repository.areas.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun setChecked(itemId: Long, checked: Boolean) {
+        viewModelScope.launch { repository.setChecked(itemId, checked) }
+    }
+
+    fun setPaused(choreId: Long, paused: Boolean) {
+        viewModelScope.launch { repository.setPaused(choreId, paused) }
+    }
+
+    fun addArea(name: String) {
+        viewModelScope.launch { repository.addArea(name) }
+    }
+
+    fun renameArea(id: Long, name: String) {
+        viewModelScope.launch { repository.renameArea(id, name) }
+    }
+
+    fun deleteArea(id: Long) {
+        viewModelScope.launch { repository.deleteArea(id) }
+    }
+
     fun complete(chore: Chore) {
         viewModelScope.launch {
             val today = LocalDate.now()
@@ -182,8 +215,20 @@ class ChoresViewModel(private val repository: ChoreRepository) : ViewModel() {
         viewModelScope.launch { repository.postpone(choreId, date) }
     }
 
-    fun save(id: Long?, name: String, notes: String, schedule: Schedule, nextDue: LocalDate) {
-        viewModelScope.launch { repository.save(id, name, notes, schedule, nextDue) }
+    fun save(
+        id: Long?,
+        name: String,
+        notes: String,
+        schedule: Schedule,
+        nextDue: LocalDate,
+        areaId: Long?,
+        checklist: List<ChecklistDraft>,
+        newAreaName: String? = null,
+    ) {
+        viewModelScope.launch {
+            val area = if (!newAreaName.isNullOrBlank()) repository.addArea(newAreaName) else areaId
+            repository.save(id, name, notes, schedule, nextDue, area, checklist)
+        }
     }
 
     fun delete(choreId: Long) {

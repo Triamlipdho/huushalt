@@ -122,4 +122,23 @@ class ChoreFlowTest {
     }
 
     private fun screenshot(name: String) = compose.screenshot(name)
+
+    @Test
+    fun editorOpensDatePickerAndDeletesAfterConfirmation() {
+        waitFor("Noch keine Aufgaben")
+        compose.onNodeWithContentDescription("Neue Aufgabe").performClick()
+        compose.onNodeWithText("Name").performTextInput("Fenster putzen")
+        compose.onNodeWithText(today()).performClick()
+        waitFor("OK")
+        compose.onNodeWithText("Abbrechen").performClick()
+        compose.onNodeWithText("Speichern").performClick()
+
+        waitFor("Fenster putzen")
+        compose.onNodeWithText("Fenster putzen").performClick()
+        compose.onNodeWithContentDescription("Bearbeiten").performClick()
+        compose.onNodeWithContentDescription("Löschen").performClick()
+        waitFor("«Fenster putzen» löschen?")
+        compose.onNodeWithText("Löschen").performClick()
+        waitFor("Noch keine Aufgaben")
+    }
 }

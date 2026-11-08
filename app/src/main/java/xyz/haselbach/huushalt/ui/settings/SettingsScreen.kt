@@ -57,6 +57,7 @@ fun SettingsScreen(
     /** Current or next holiday, shown in the "Ferien" section (F10.1). */
     holiday: Holiday?,
     onOpenHoliday: () -> Unit,
+    onOpenAreas: () -> Unit,
 ) {
     val reminders = settings.reminders
     var editing by rememberSaveable { mutableStateOf<TimeField?>(null) }
@@ -122,6 +123,13 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(16.dp),
+            )
+            HorizontalDivider()
+            SectionHeader(stringResource(R.string.areas_title))
+            ListItem(
+                modifier = Modifier.clickable(onClick = onOpenAreas),
+                headlineContent = { Text(stringResource(R.string.areas_title)) },
+                supportingContent = { Text(stringResource(R.string.areas_summary)) },
             )
             HorizontalDivider()
             SectionHeader(stringResource(R.string.holiday_title))

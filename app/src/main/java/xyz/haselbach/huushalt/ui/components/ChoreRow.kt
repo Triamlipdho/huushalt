@@ -32,12 +32,18 @@ fun ChoreRow(
         modifier = modifier.clickable(onClick = onClick),
         headlineContent = { Text(chore.name, maxLines = 2, overflow = TextOverflow.Ellipsis) },
         supportingContent = {
-            Text(
+            // e.g. "Küche · 2 Tage überfällig · 1/4"
+            val parts = listOfNotNull(
+                chore.areaName,
                 dueLabel(chore, today),
+                if (chore.checklistTotal > 0) stringResource(R.string.checklist_progress, chore.checklistDone, chore.checklistTotal) else null,
+            )
+            Text(
+                parts.joinToString(" · "),
                 color = if (overdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         },
-        trailingContent = if (chore.isFinished) null else {
+        trailingContent = if (chore.isFinished || chore.paused) null else {
             {
                 OutlinedIconButton(onClick = onComplete) {
                     Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.action_complete_description, chore.name))
