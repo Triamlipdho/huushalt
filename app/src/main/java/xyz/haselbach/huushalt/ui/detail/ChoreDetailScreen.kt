@@ -83,6 +83,8 @@ fun ChoreDetailScreen(
     onCompleteOn: (LocalDate) -> Unit = {},
     /** Skip this occurrence (F4.5). */
     onSkip: () -> Unit = {},
+    /** Create a new chore with the same settings (F1.10). */
+    onDuplicate: () -> Unit = {},
 ) {
     var showPostpone by rememberSaveable { mutableStateOf(false) }
     var pickDoneDate by rememberSaveable { mutableStateOf(false) }
@@ -136,6 +138,7 @@ fun ChoreDetailScreen(
                             TextButton(onClick = onSkip) { Text(stringResource(R.string.action_skip)) }
                         }
                         TextButton(onClick = { onPausedChange(true) }) { Text(stringResource(R.string.action_pause)) }
+                        TextButton(onClick = onDuplicate) { Text(stringResource(R.string.action_duplicate)) }
                     }
                 }
             }

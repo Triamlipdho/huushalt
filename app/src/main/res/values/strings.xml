@@ -101,6 +101,7 @@
     <string name="edit_name">Name</string>
     <string name="edit_name_hint">z. B. Staubsaugen</string>
     <string name="edit_notes">Notizen (optional)</string>
+    <string name="edit_suggestions">Vorschläge – antippen zum Übernehmen</string>
     <string name="edit_repeat">Wiederholen</string>
     <string name="edit_repeat_once">Einmalig</string>
     <string name="edit_repeat_once_help">Nur einmal erledigen.</string>
@@ -344,4 +345,15 @@
         <item quantity="one">%d Eintrag im Verlauf</item>
         <item quantity="other">%d Einträge im Verlauf</item>
     </plurals>
+
+    <!-- Duplicate, search, app shortcuts (F1.10, F3.7, F9.7) -->
+    <string name="action_duplicate">Duplizieren</string>
+    <string name="all_search">Aufgaben durchsuchen</string>
+    <string name="all_search_clear">Suche löschen</string>
+    <string name="all_search_empty_title">Nichts gefunden</string>
+    <string name="all_search_empty_body">Keine Aufgabe passt zu «%s».</string>
+    <string name="shortcut_new_short">Neue Aufgabe</string>
+    <string name="shortcut_new_long">Neue Aufgabe erfassen</string>
+    <string name="shortcut_catalog_short">Vorschläge</string>
+    <string name="shortcut_catalog_long">Aufgaben aus Vorschlägen hinzufügen</string>
 </resources>

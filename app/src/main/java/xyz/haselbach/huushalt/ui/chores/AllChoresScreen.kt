@@ -3,10 +3,17 @@ package xyz.haselbach.huushalt.ui.chores
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,10 +39,17 @@ fun AllChoresScreen(
     contentPadding: PaddingValues,
     onOpen: (Chore) -> Unit,
     onComplete: (Chore) -> Unit,
+    showAreaSort: Boolean = true,
 ) {
     var sort by rememberSaveable { mutableStateOf(Sort.DUE) }
-    val paused = chores.filter { it.paused }.sortedBy { it.name.lowercase() }
-    val (open, finished) = chores.filterNot { it.paused }.partition { !it.isFinished }
+    var query by rememberSaveable { mutableStateOf("") }
+    // Search by name and notes (F3.7).
+    val visible = if (query.isBlank()) chores else chores.filter {
+        it.name.contains(query.trim(), ignoreCase = true) || it.notes.contains(query.trim(), ignoreCase = true) ||
+            it.areaName?.contains(query.trim(), ignoreCase = true) == true
+    }
+    val paused = visible.filter { it.paused }.sortedBy { it.name.lowercase() }
+    val (open, finished) = visible.filterNot { it.paused }.partition { !it.isFinished }
     val byDue = compareBy<Chore> { it.dueDate }.thenBy { it.name.lowercase() }
     val sorted = when (sort) {
         Sort.NAME -> open.sortedBy { it.name.lowercase() }
@@ -47,11 +61,37 @@ fun AllChoresScreen(
         .toSortedMap(compareBy<String?> { it == null }.thenBy { it?.lowercase() })
 
     LazyColumn(contentPadding = contentPadding.withFabSpace()) {
+        if (chores.size > SEARCH_FROM) {
+            item(key = "search") {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    placeholder = { Text(stringResource(R.string.all_search)) },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                    trailingIcon = if (query.isEmpty()) null else {
+                        {
+                            IconButton(onClick = { query = "" }) {
+                                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.all_search_clear))
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+        }
         item(key = "sort") {
             Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(selected = sort == Sort.DUE, onClick = { sort = Sort.DUE }, label = { Text(stringResource(R.string.all_sort_due)) })
                 FilterChip(selected = sort == Sort.NAME, onClick = { sort = Sort.NAME }, label = { Text(stringResource(R.string.all_sort_name)) })
-                FilterChip(selected = sort == Sort.AREA, onClick = { sort = Sort.AREA }, label = { Text(stringResource(R.string.all_sort_area)) })
+                if (showAreaSort) {
+                    FilterChip(selected = sort == Sort.AREA, onClick = { sort = Sort.AREA }, label = { Text(stringResource(R.string.all_sort_area)) })
+                }
+            }
+        }
+        if (chores.isNotEmpty() && visible.isEmpty()) {
+            item(key = "no-results") {
+                EmptyState(stringResource(R.string.all_search_empty_title), stringResource(R.string.all_search_empty_body, query.trim()))
             }
         }
         if (chores.isEmpty()) {
@@ -59,7 +99,7 @@ fun AllChoresScreen(
                 EmptyState(stringResource(R.string.home_no_chores_title), stringResource(R.string.home_no_chores_body))
             }
         }
-        if (sort == Sort.AREA) {
+        if (sort == Sort.AREA && showAreaSort) {
             byArea.forEach { (area, list) ->
                 item(key = "area-$area") { SectionHeader(area ?: noAreaLabel) }
                 items(list.sortedWith(byDue), key = { it.id }) { chore ->
@@ -87,3 +127,6 @@ fun AllChoresScreen(
 }
 
 private enum class Sort { DUE, NAME, AREA }
+
+/** The search field appears once there are enough chores to need it. */
+private const val SEARCH_FROM = 8
