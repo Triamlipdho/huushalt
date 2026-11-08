@@ -298,4 +298,52 @@
     <string name="schedule_monthly_last">Jeden Monat am letzten %s</string>
     <string name="schedule_every_months_last" tools:ignore="PluralsCandidate">Alle %1$d Monate am letzten %2$s</string>
     <string name="schedule_tolerance">%1$s, Spielraum %2$s</string>
+
+    <!-- Starter set / catalogue (F8.2) -->
+    <string name="catalog_title">Vorschläge</string>
+    <string name="catalog_intro">Wähle aus, was bei dir anfällt. Intervalle, Räume und Checklisten kannst du danach jederzeit anpassen.</string>
+    <string name="catalog_whole_home">Ganze Wohnung</string>
+    <string name="catalog_exists">Schon erfasst</string>
+    <string name="catalog_add_none">Aufgaben auswählen</string>
+    <plurals name="catalog_add">
+        <item quantity="one">%d Aufgabe hinzufügen</item>
+        <item quantity="other">%d Aufgaben hinzufügen</item>
+    </plurals>
+    <string name="catalog_open">Vorschläge ansehen</string>
+    <string name="catalog_settings_summary">Häufige Aufgaben mit passenden Intervallen hinzufügen</string>
+
+    <!-- Display and data settings (F9.3, F9.4, F9.6) -->
+    <string name="settings_display">Darstellung</string>
+    <string name="settings_theme">Farbschema</string>
+    <string name="theme_system">Wie das System</string>
+    <string name="theme_light">Hell</string>
+    <string name="theme_dark">Dunkel</string>
+    <string name="settings_first_day">Wochenbeginn</string>
+    <string name="settings_chores">Aufgaben</string>
+    <string name="settings_data">Daten</string>
+    <string name="data_export">Daten exportieren</string>
+    <string name="data_export_summary">Alle Aufgaben, Räume, Ferien und den Verlauf als Datei speichern</string>
+    <string name="data_import">Daten importieren</string>
+    <string name="data_import_summary">Eine exportierte Datei einlesen; ersetzt die aktuellen Daten</string>
+    <string name="data_import_title">Daten ersetzen?</string>
+    <string name="data_import_body">Die Datei enthält %1$s und %2$s. Alle aktuellen Aufgaben und der Verlauf werden dadurch ersetzt.</string>
+    <string name="data_import_confirm">Ersetzen</string>
+    <string name="data_delete_all">Alle Daten löschen</string>
+    <string name="data_delete_all_summary">Aufgaben, Räume, Ferien und Verlauf löschen; Einstellungen bleiben erhalten</string>
+    <string name="data_delete_all_title">Alle Daten löschen?</string>
+    <string name="data_delete_all_body">Alle Aufgaben, Räume, Ferien und der ganze Verlauf werden gelöscht. Das kann nicht rückgängig gemacht werden. Exportiere deine Daten vorher, wenn du sie behalten möchtest.</string>
+    <string name="data_delete_all_confirm">Alles löschen</string>
+    <string name="data_exported">Daten exportiert</string>
+    <string name="data_export_failed">Export fehlgeschlagen</string>
+    <string name="data_imported">Daten importiert</string>
+    <string name="data_import_failed">Die Datei konnte nicht gelesen werden. Ist es ein Export von huushalt?</string>
+    <string name="data_deleted">Alle Daten gelöscht</string>
+    <plurals name="count_chores">
+        <item quantity="one">%d Aufgabe</item>
+        <item quantity="other">%d Aufgaben</item>
+    </plurals>
+    <plurals name="count_completions">
+        <item quantity="one">%d Eintrag im Verlauf</item>
+        <item quantity="other">%d Einträge im Verlauf</item>
+    </plurals>
 </resources>

@@ -65,7 +65,7 @@ object Progress {
      * "Alles erledigt" streak (F7.2): days in a row without an overdue chore at the end of the day,
      * from [start] (the day the first chore was created). Today only counts once nothing is open
      * ([todayClean]); until then the streak ending yesterday is still alive. With
-     * [freeDayPerWeek], one overdue day per week (Monday to Sunday) doesn't break it (F7.6).
+     * [freeDayPerWeek], one overdue day per week (starting on [weekStart]) doesn't break it (F7.6).
      * [holidayDays] are neutral: they neither count nor break the streak (F10.3).
      */
     fun streaks(
@@ -75,6 +75,7 @@ object Progress {
         todayClean: Boolean,
         freeDayPerWeek: Boolean = true,
         holidayDays: Set<LocalDate> = emptySet(),
+        weekStart: DayOfWeek = DayOfWeek.MONDAY,
     ): Streaks {
         val last = if (todayClean) today else today.minusDays(1)
         var run = 0
@@ -87,7 +88,7 @@ object Progress {
                 continue
             }
             if (day in overdueDays) {
-                val week = day.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+                val week = day.with(TemporalAdjusters.previousOrSame(weekStart))
                 if (freeDayPerWeek && freeDaysUsed.add(week)) {
                     run++
                 } else {
@@ -107,8 +108,8 @@ object Progress {
     fun choreStreak(completionsNewestFirst: List<CompletionRecord>, overdueNow: Boolean): Int =
         if (overdueNow) 0 else completionsNewestFirst.takeWhile { it.onTime }.size
 
-    fun stats(completions: List<CompletionRecord>, today: LocalDate): Stats {
-        val thisWeekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+    fun stats(completions: List<CompletionRecord>, today: LocalDate, weekStart: DayOfWeek = DayOfWeek.MONDAY): Stats {
+        val thisWeekStart = today.with(TemporalAdjusters.previousOrSame(weekStart))
         val thisMonth = YearMonth.from(today)
         fun countWeek(weekStart: LocalDate) =
             completions.count { it.doneDate >= weekStart && it.doneDate < weekStart.plusWeeks(1) }

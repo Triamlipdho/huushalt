@@ -7,6 +7,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import xyz.haselbach.huushalt.data.BackupStore
 import xyz.haselbach.huushalt.data.ChoreRepository
 import xyz.haselbach.huushalt.data.HuushaltDatabase
 import xyz.haselbach.huushalt.reminders.ReminderNotifier
@@ -18,7 +19,9 @@ class HuushaltApplication : Application() {
     /** For work that must outlive a screen, e.g. in broadcast receivers. */
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    val repository: ChoreRepository by lazy { ChoreRepository(HuushaltDatabase.create(this)) }
+    private val database by lazy { HuushaltDatabase.create(this) }
+    val repository: ChoreRepository by lazy { ChoreRepository(database) }
+    val backups: BackupStore by lazy { BackupStore(database) }
     val settings: SettingsRepository by lazy { SettingsRepository(this) }
     val notifier: ReminderNotifier by lazy { ReminderNotifier(this) }
     val reminders: Reminders by lazy { Reminders(repository, settings, ReminderScheduler(this), notifier) }

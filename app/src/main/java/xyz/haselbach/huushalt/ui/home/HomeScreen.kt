@@ -58,6 +58,7 @@ fun HomeScreen(
     onChangeHoliday: () -> Unit = {},
     areas: List<Area> = emptyList(),
     onEditChore: (Chore) -> Unit = {},
+    onOpenCatalog: () -> Unit = {},
 ) {
     var confirmReschedule by rememberSaveable { mutableStateOf(false) }
     // Filter the lists by room (F3.5); null shows all.
@@ -85,7 +86,13 @@ fun HomeScreen(
         }
         when {
             !state.hasChores -> item(key = "empty") {
-                EmptyState(stringResource(R.string.home_no_chores_title), stringResource(R.string.home_no_chores_body))
+                // First start: offer the starter set (F8.2).
+                EmptyState(
+                    stringResource(R.string.home_no_chores_title),
+                    stringResource(R.string.home_no_chores_body),
+                    actionLabel = stringResource(R.string.catalog_open),
+                    onAction = onOpenCatalog,
+                )
             }
             state.open == 0 -> item(key = "done") {
                 EmptyState(stringResource(R.string.home_empty_title), stringResource(R.string.home_empty_body))

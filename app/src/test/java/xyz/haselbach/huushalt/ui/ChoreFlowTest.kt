@@ -9,7 +9,9 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import org.junit.Before
@@ -111,7 +113,9 @@ class ChoreFlowTest {
 
         // Without motivation, the streak is hidden (F7.9).
         compose.onNodeWithContentDescription("Einstellungen").performClick()
-        compose.onNodeWithText("Serien und Feiern").performClick()
+        // The celebration snackbar may still cover the bottom of the screen: use the click action
+        // instead of a tap at a screen position.
+        compose.onNodeWithText("Serien und Feiern").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
         compose.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
         waitFor("Zuletzt erledigt")
         compose.waitUntilDoesNotExist(hasText("Alles erledigt in Folge"), timeoutMillis = 5_000)

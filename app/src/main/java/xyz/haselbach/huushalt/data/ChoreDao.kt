@@ -91,6 +91,9 @@ interface ChoreDao {
     @Query("SELECT * FROM areas ORDER BY name COLLATE NOCASE")
     fun observeAreas(): Flow<List<AreaEntity>>
 
+    @Query("SELECT * FROM areas")
+    suspend fun getAreas(): List<AreaEntity>
+
     @Insert
     suspend fun insertArea(area: AreaEntity): Long
 

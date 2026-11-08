@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.map
 import xyz.haselbach.huushalt.domain.Area
 import xyz.haselbach.huushalt.domain.ChecklistItem
 import xyz.haselbach.huushalt.domain.Chore
+import xyz.haselbach.huushalt.domain.ChoreCatalog
+import xyz.haselbach.huushalt.domain.ChoreTemplate
 import xyz.haselbach.huushalt.domain.DueStatus
 import xyz.haselbach.huushalt.domain.Holiday
 import xyz.haselbach.huushalt.domain.HolidayRules
@@ -103,6 +105,28 @@ class ChoreRepository(
     fun checklist(choreId: Long): Flow<List<ChecklistItem>> = dao.observeChecklist(choreId).map { list -> list.map { it.toDomain() } }
 
     suspend fun setChecked(itemId: Long, checked: Boolean) = dao.setChecklistItemChecked(itemId, checked)
+
+    /**
+     * Adds chores from the catalogue (F8.2): rooms are created when missing (matched by name,
+     * ignoring case), first due dates are spread out so not everything is due on the same day.
+     */
+    suspend fun addFromTemplates(templates: List<ChoreTemplate>, today: LocalDate = LocalDate.now()) = db.withTransaction {
+        val areaIds = dao.getAreas().associate { it.name.lowercase() to it.id }.toMutableMap()
+        templates.zip(ChoreCatalog.firstDueDates(templates, today)).forEach { (template, due) ->
+            val areaId = template.area?.let { name ->
+                areaIds.getOrPut(name.lowercase()) { dao.insertArea(AreaEntity(name = name)) }
+            }
+            save(
+                id = null,
+                name = template.name,
+                notes = "",
+                schedule = template.schedule,
+                nextDue = due,
+                areaId = areaId,
+                checklist = template.checklist.map { ChecklistDraft(null, it) },
+            )
+        }
+    }
 
     // Areas (F1.4)
 

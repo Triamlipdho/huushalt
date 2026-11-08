@@ -5,7 +5,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import xyz.haselbach.huushalt.settings.ThemeMode
 import xyz.haselbach.huushalt.ui.HuushaltApp
 import xyz.haselbach.huushalt.ui.theme.HuushaltTheme
 
@@ -17,8 +20,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val settings = (application as HuushaltApplication).settings.settings
         setContent {
-            HuushaltTheme {
+            val theme = settings.collectAsStateWithLifecycle(null).value?.theme ?: ThemeMode.SYSTEM
+            val dark = when (theme) {
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+            }
+            HuushaltTheme(darkTheme = dark) {
                 HuushaltApp(openTodayRequests = openTodayRequests.intValue)
             }
         }

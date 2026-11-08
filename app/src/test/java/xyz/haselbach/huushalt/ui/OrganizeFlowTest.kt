@@ -104,7 +104,7 @@ class OrganizeFlowTest {
     fun roomsCanBeAddedRenamedAndDeleted() {
         waitFor("Noch keine Aufgaben")
         compose.onNodeWithContentDescription("Einstellungen").performClick()
-        compose.onNodeWithText("Aufgaben nach Räumen ordnen und filtern").performClick()
+        compose.onNodeWithText("Aufgaben nach Räumen ordnen und filtern").performScrollTo().performClick()
         waitFor("Noch keine Räume", substring = true)
         compose.onNodeWithText("Neuer Raum").performTextInput("Kuche")
         compose.onNodeWithContentDescription("Raum hinzufügen").performClick()

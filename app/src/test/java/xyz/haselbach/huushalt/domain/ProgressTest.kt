@@ -110,4 +110,13 @@ class ProgressTest {
         assertEquals(2, stats.weeks.last().count)
         assertNull(Progress.stats(emptyList(), today).onTimePercent)
     }
+
+    @Test
+    fun `weeks can start on Sunday`() {
+        val today = d("2026-11-11") // Wednesday; the week from Sunday the 8th
+        val completions = listOf(CompletionRecord(1, d("2026-11-08"), d("2026-11-08")), CompletionRecord(1, d("2026-11-07"), d("2026-11-07")))
+        assertEquals(1, Progress.stats(completions, today, java.time.DayOfWeek.SUNDAY).thisWeek)
+        assertEquals(d("2026-11-08"), Progress.stats(completions, today, java.time.DayOfWeek.SUNDAY).weeks.last().weekStart)
+        assertEquals(2, Progress.stats(completions, d("2026-11-08")).thisWeek) // Monday start: Sat and Sun in one week
+    }
 }

@@ -88,6 +88,7 @@ fun ChoreEditScreen(
     onDelete: () -> Unit,
     areas: List<Area> = emptyList(),
     initialChecklist: List<ChecklistItem> = emptyList(),
+    firstDayOfWeek: DayOfWeek = DayOfWeek.MONDAY,
 ) {
     val initial = chore?.schedule
     var name by rememberSaveable { mutableStateOf(chore?.name ?: "") }
@@ -314,7 +315,8 @@ fun ChoreEditScreen(
                     Text(stringResource(R.string.edit_weekdays), style = MaterialTheme.typography.titleSmall)
                     val names = stringArrayResource(R.array.weekdays_short)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        DayOfWeek.entries.forEach { day ->
+                        // Weekdays in the order of the chosen first day of the week (F9.4).
+                        (0L until 7L).map { firstDayOfWeek.plus(it) }.forEach { day ->
                             val bit = 1 shl (day.value - 1)
                             FilterChip(
                                 selected = weekdayMask and bit != 0,
