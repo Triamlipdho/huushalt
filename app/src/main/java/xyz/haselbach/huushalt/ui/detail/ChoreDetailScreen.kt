@@ -2,6 +2,7 @@ package xyz.haselbach.huushalt.ui.detail
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -35,10 +37,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 import xyz.haselbach.huushalt.R
 import xyz.haselbach.huushalt.data.CompletionEntity
+import xyz.haselbach.huushalt.domain.ChecklistItem
 import xyz.haselbach.huushalt.domain.Chore
 import xyz.haselbach.huushalt.ui.components.LocalDatePickerDialog
 import xyz.haselbach.huushalt.ui.components.SectionHeader
@@ -62,6 +66,9 @@ fun ChoreDetailScreen(
     onDeleteCompletion: (completionId: Long) -> Unit,
     /** Completions in a row done on time, or null when motivation is turned off (F7.3, F7.9). */
     streak: Int? = null,
+    checklist: List<ChecklistItem> = emptyList(),
+    onToggleItem: (ChecklistItem) -> Unit = {},
+    onPausedChange: (Boolean) -> Unit = {},
 ) {
     var showPostpone by rememberSaveable { mutableStateOf(false) }
     var editingCompletionId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -89,6 +96,7 @@ fun ChoreDetailScreen(
                 Column {
                     Fact(stringResource(R.string.detail_next_due), dueLabel(chore, today))
                     Fact(stringResource(R.string.detail_schedule), scheduleLabel(chore.schedule))
+                    chore.areaName?.let { Fact(stringResource(R.string.area), it) }
                     Fact(
                         stringResource(R.string.detail_last_done),
                         chore.lastDone?.formatLong() ?: stringResource(R.string.detail_never_done),
@@ -103,7 +111,34 @@ fun ChoreDetailScreen(
                     }
                 }
             }
-            if (!chore.isFinished) {
+            if (checklist.isNotEmpty()) {
+                item(key = "checklist-header") {
+                    SectionHeader(
+                        stringResource(R.string.checklist) + " " +
+                            stringResource(R.string.checklist_progress, checklist.count { it.checked }, checklist.size),
+                    )
+                }
+                items(checklist, key = { "item-${it.id}" }) { item ->
+                    ListItem(
+                        modifier = Modifier.toggleable(
+                            value = item.checked,
+                            enabled = !chore.paused,
+                            role = Role.Checkbox,
+                            onValueChange = { onToggleItem(item) },
+                        ),
+                        leadingContent = { Checkbox(checked = item.checked, onCheckedChange = null, enabled = !chore.paused) },
+                        headlineContent = { Text(item.text) },
+                    )
+                }
+            }
+            if (chore.paused) {
+                item(key = "paused") {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(stringResource(R.string.detail_paused), style = MaterialTheme.typography.bodyMedium)
+                        Button(onClick = { onPausedChange(false) }) { Text(stringResource(R.string.action_resume)) }
+                    }
+                }
+            } else if (!chore.isFinished) {
                 item(key = "actions") {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -117,6 +152,9 @@ fun ChoreDetailScreen(
                             Icon(Icons.Filled.DateRange, contentDescription = null)
                             Text(stringResource(R.string.action_postpone), modifier = Modifier.padding(start = 8.dp))
                         }
+                    }
+                    TextButton(onClick = { onPausedChange(true) }, modifier = Modifier.padding(horizontal = 8.dp)) {
+                        Text(stringResource(R.string.action_pause))
                     }
                 }
             }

@@ -32,19 +32,25 @@ fun AllChoresScreen(
     onOpen: (Chore) -> Unit,
     onComplete: (Chore) -> Unit,
 ) {
-    var sortByName by rememberSaveable { mutableStateOf(false) }
-    val (open, finished) = chores.partition { !it.isFinished }
-    val sorted = if (sortByName) {
-        open.sortedBy { it.name.lowercase() }
-    } else {
-        open.sortedWith(compareBy<Chore> { it.dueDate }.thenBy { it.name.lowercase() })
+    var sort by rememberSaveable { mutableStateOf(Sort.DUE) }
+    val paused = chores.filter { it.paused }.sortedBy { it.name.lowercase() }
+    val (open, finished) = chores.filterNot { it.paused }.partition { !it.isFinished }
+    val byDue = compareBy<Chore> { it.dueDate }.thenBy { it.name.lowercase() }
+    val sorted = when (sort) {
+        Sort.NAME -> open.sortedBy { it.name.lowercase() }
+        else -> open.sortedWith(byDue)
     }
+    val noAreaLabel = stringResource(R.string.all_section_no_area)
+    // Grouped by room (F3.4), rooms alphabetically, chores without a room last.
+    val byArea = open.groupBy { it.areaName }
+        .toSortedMap(compareBy<String?> { it == null }.thenBy { it?.lowercase() })
 
     LazyColumn(contentPadding = contentPadding) {
         item(key = "sort") {
             Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = !sortByName, onClick = { sortByName = false }, label = { Text(stringResource(R.string.all_sort_due)) })
-                FilterChip(selected = sortByName, onClick = { sortByName = true }, label = { Text(stringResource(R.string.all_sort_name)) })
+                FilterChip(selected = sort == Sort.DUE, onClick = { sort = Sort.DUE }, label = { Text(stringResource(R.string.all_sort_due)) })
+                FilterChip(selected = sort == Sort.NAME, onClick = { sort = Sort.NAME }, label = { Text(stringResource(R.string.all_sort_name)) })
+                FilterChip(selected = sort == Sort.AREA, onClick = { sort = Sort.AREA }, label = { Text(stringResource(R.string.all_sort_area)) })
             }
         }
         if (chores.isEmpty()) {
@@ -52,8 +58,23 @@ fun AllChoresScreen(
                 EmptyState(stringResource(R.string.home_no_chores_title), stringResource(R.string.home_no_chores_body))
             }
         }
-        items(sorted, key = { it.id }) { chore ->
-            ChoreRow(chore, today, onClick = { onOpen(chore) }, onComplete = { onComplete(chore) })
+        if (sort == Sort.AREA) {
+            byArea.forEach { (area, list) ->
+                item(key = "area-$area") { SectionHeader(area ?: noAreaLabel) }
+                items(list.sortedWith(byDue), key = { it.id }) { chore ->
+                    ChoreRow(chore, today, onClick = { onOpen(chore) }, onComplete = { onComplete(chore) })
+                }
+            }
+        } else {
+            items(sorted, key = { it.id }) { chore ->
+                ChoreRow(chore, today, onClick = { onOpen(chore) }, onComplete = { onComplete(chore) })
+            }
+        }
+        if (paused.isNotEmpty()) {
+            item(key = "paused-header") { SectionHeader(stringResource(R.string.all_section_paused)) }
+            items(paused, key = { it.id }) { chore ->
+                ChoreRow(chore, today, onClick = { onOpen(chore) }, onComplete = {})
+            }
         }
         if (finished.isNotEmpty()) {
             item(key = "finished-header") { SectionHeader(stringResource(R.string.all_section_finished)) }
@@ -63,3 +84,5 @@ fun AllChoresScreen(
         }
     }
 }
+
+private enum class Sort { DUE, NAME, AREA }

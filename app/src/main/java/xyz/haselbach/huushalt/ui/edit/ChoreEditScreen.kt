@@ -1,6 +1,7 @@
 package xyz.haselbach.huushalt.ui.edit
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -15,10 +16,14 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -36,7 +41,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,7 +58,10 @@ import androidx.compose.ui.unit.dp
 import java.time.DayOfWeek
 import java.time.LocalDate
 import xyz.haselbach.huushalt.R
+import xyz.haselbach.huushalt.data.ChecklistDraft
 import xyz.haselbach.huushalt.data.toBitmask
+import xyz.haselbach.huushalt.domain.Area
+import xyz.haselbach.huushalt.domain.ChecklistItem
 import xyz.haselbach.huushalt.domain.Chore
 import xyz.haselbach.huushalt.domain.RepeatUnit
 import xyz.haselbach.huushalt.domain.Schedule
@@ -70,8 +81,10 @@ fun ChoreEditScreen(
     chore: Chore?,
     today: LocalDate,
     onClose: () -> Unit,
-    onSave: (name: String, notes: String, schedule: Schedule, nextDue: LocalDate) -> Unit,
+    onSave: (ChoreDraft) -> Unit,
     onDelete: () -> Unit,
+    areas: List<Area> = emptyList(),
+    initialChecklist: List<ChecklistItem> = emptyList(),
 ) {
     val initial = chore?.schedule
     var name by rememberSaveable { mutableStateOf(chore?.name ?: "") }
@@ -93,6 +106,12 @@ fun ChoreEditScreen(
     var showErrors by rememberSaveable { mutableStateOf(false) }
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
     var showDeleteConfirm by rememberSaveable { mutableStateOf(false) }
+    var areaId by rememberSaveable { mutableStateOf(chore?.areaId) }
+    // A new room typed in directly, created together with the chore. Null: an existing room or none.
+    var newAreaName by rememberSaveable { mutableStateOf<String?>(null) }
+    val checklist = rememberSaveable(saver = checklistSaver) {
+        initialChecklist.map { ChecklistDraft(it.id, it.text) }.toMutableStateList()
+    }
 
     val due = LocalDate.ofEpochDay(dueEpochDay)
     val weekdays = DayOfWeek.entries.filter { weekdayMask and (1 shl (it.value - 1)) != 0 }.toSet()
@@ -117,7 +136,20 @@ fun ChoreEditScreen(
             showErrors = true
             return
         }
-        onSave(name, notes, schedule, due)
+        // An existing room with the typed name is reused instead of creating a second one.
+        val typed = newAreaName?.trim()?.takeIf { it.isNotEmpty() }
+        val existing = typed?.let { t -> areas.find { it.name.equals(t, ignoreCase = true) } }
+        onSave(
+            ChoreDraft(
+                name,
+                notes,
+                schedule,
+                due,
+                areaId = existing?.id ?: areaId.takeIf { typed == null },
+                newAreaName = typed.takeIf { existing == null },
+                checklist = checklist.toList(),
+            ),
+        )
     }
 
     Scaffold(
@@ -171,6 +203,31 @@ fun ChoreEditScreen(
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            AreaPicker(
+                areas = areas,
+                selectedId = areaId,
+                creatingNew = newAreaName != null,
+                onSelect = {
+                    areaId = it
+                    newAreaName = null
+                },
+                onNew = {
+                    areaId = null
+                    newAreaName = ""
+                },
+            )
+            newAreaName?.let { typed ->
+                OutlinedTextField(
+                    value = typed,
+                    onValueChange = { newAreaName = it },
+                    label = { Text(stringResource(R.string.area_name)) },
+                    placeholder = { Text(stringResource(R.string.area_name_hint)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
 
             Text(stringResource(R.string.edit_repeat), style = MaterialTheme.typography.titleSmall)
             Column(Modifier.selectableGroup()) {
@@ -255,6 +312,33 @@ fun ChoreEditScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+
+            // Checklist (F1.7)
+            Text(stringResource(R.string.checklist), style = MaterialTheme.typography.titleSmall)
+            Text(
+                stringResource(R.string.checklist_optional),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            checklist.forEachIndexed { index, item ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = item.text,
+                        onValueChange = { checklist[index] = item.copy(text = it) },
+                        placeholder = { Text(stringResource(R.string.checklist_item_hint)) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(onClick = { checklist.removeAt(index) }) {
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.checklist_remove))
+                    }
+                }
+            }
+            TextButton(onClick = { checklist.add(ChecklistDraft(null, "")) }) {
+                Icon(Icons.Filled.Add, contentDescription = null)
+                Text(stringResource(R.string.checklist_add), modifier = Modifier.padding(start = 8.dp))
+            }
         }
     }
 
@@ -300,6 +384,61 @@ private fun RepeatOption(selected: Boolean, title: Int, help: Int, onSelect: () 
         Column(Modifier.padding(start = 12.dp)) {
             Text(stringResource(title), style = MaterialTheme.typography.bodyLarge)
             Text(stringResource(help), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/** Everything the editor produces. [newAreaName] is a room to create for this chore. */
+data class ChoreDraft(
+    val name: String,
+    val notes: String,
+    val schedule: Schedule,
+    val nextDue: LocalDate,
+    val areaId: Long?,
+    val newAreaName: String?,
+    val checklist: List<ChecklistDraft>,
+)
+
+private val checklistSaver = listSaver<SnapshotStateList<ChecklistDraft>, String>(
+    save = { list -> list.flatMap { listOf(it.id?.toString() ?: "", it.text) } },
+    restore = { flat -> flat.chunked(2).map { (id, text) -> ChecklistDraft(id.toLongOrNull(), text) }.toMutableStateList() },
+)
+
+/** Room selection (F1.4): existing rooms, none, or a new one. */
+@Composable
+private fun AreaPicker(
+    areas: List<Area>,
+    selectedId: Long?,
+    creatingNew: Boolean,
+    onSelect: (Long?) -> Unit,
+    onNew: () -> Unit,
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val label = when {
+        creatingNew -> stringResource(R.string.area_new_title)
+        else -> areas.find { it.id == selectedId }?.name ?: stringResource(R.string.area_none)
+    }
+    Text(stringResource(R.string.area), style = MaterialTheme.typography.titleSmall)
+    Box {
+        OutlinedButton(onClick = { expanded = true }) {
+            Text(label)
+            Icon(Icons.Filled.ArrowDropDown, contentDescription = null)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(text = { Text(stringResource(R.string.area_none)) }, onClick = {
+                expanded = false
+                onSelect(null)
+            })
+            areas.forEach { area ->
+                DropdownMenuItem(text = { Text(area.name) }, onClick = {
+                    expanded = false
+                    onSelect(area.id)
+                })
+            }
+            DropdownMenuItem(text = { Text(stringResource(R.string.area_new)) }, onClick = {
+                expanded = false
+                onNew()
+            })
         }
     }
 }

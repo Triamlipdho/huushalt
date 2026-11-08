@@ -11,9 +11,9 @@ import kotlinx.coroutines.flow.Flow
 interface ChoreDao {
     @Query(
         """
-        SELECT chores.*, (SELECT MAX(doneDate) FROM completions WHERE completions.choreId = chores.id) AS lastDone
-        FROM chores
-        ORDER BY name COLLATE NOCASE
+        SELECT $CHORE_COLUMNS
+        FROM chores LEFT JOIN areas ON areas.id = chores.areaId
+        ORDER BY chores.name COLLATE NOCASE
         """,
     )
     fun observeChores(): Flow<List<ChoreWithLastDone>>
@@ -69,6 +69,56 @@ interface ChoreDao {
     @Insert
     suspend fun insertMissedPeriod(period: MissedPeriodEntity)
 
-    @Query("SELECT chores.*, (SELECT MAX(doneDate) FROM completions WHERE completions.choreId = chores.id) AS lastDone FROM chores")
+    @Query("SELECT $CHORE_COLUMNS FROM chores LEFT JOIN areas ON areas.id = chores.areaId")
     suspend fun getChores(): List<ChoreWithLastDone>
+
+    @Query("UPDATE chores SET paused = :paused WHERE id = :id")
+    suspend fun updatePaused(id: Long, paused: Boolean)
+
+    // Areas (F1.4)
+
+    @Query("SELECT * FROM areas ORDER BY name COLLATE NOCASE")
+    fun observeAreas(): Flow<List<AreaEntity>>
+
+    @Insert
+    suspend fun insertArea(area: AreaEntity): Long
+
+    @Query("UPDATE areas SET name = :name WHERE id = :id")
+    suspend fun renameArea(id: Long, name: String)
+
+    @Query("DELETE FROM areas WHERE id = :id")
+    suspend fun deleteArea(id: Long)
+
+    // Checklists (F1.7)
+
+    @Query("SELECT * FROM checklist_items WHERE choreId = :choreId ORDER BY position")
+    fun observeChecklist(choreId: Long): Flow<List<ChecklistItemEntity>>
+
+    @Query("SELECT * FROM checklist_items WHERE choreId = :choreId ORDER BY position")
+    suspend fun getChecklist(choreId: Long): List<ChecklistItemEntity>
+
+    @Insert
+    suspend fun insertChecklistItem(item: ChecklistItemEntity): Long
+
+    @Update
+    suspend fun updateChecklistItem(item: ChecklistItemEntity)
+
+    @Query("DELETE FROM checklist_items WHERE id = :id")
+    suspend fun deleteChecklistItem(id: Long)
+
+    @Query("UPDATE checklist_items SET checked = :checked WHERE id = :id")
+    suspend fun setChecklistItemChecked(id: Long, checked: Boolean)
+
+    @Query("UPDATE checklist_items SET checked = 0 WHERE choreId = :choreId")
+    suspend fun resetChecklist(choreId: Long)
+
+    companion object {
+        const val CHORE_COLUMNS = """
+            chores.*,
+            (SELECT MAX(doneDate) FROM completions WHERE completions.choreId = chores.id) AS lastDone,
+            areas.name AS areaName,
+            (SELECT COUNT(*) FROM checklist_items WHERE checklist_items.choreId = chores.id) AS checklistTotal,
+            (SELECT COUNT(*) FROM checklist_items WHERE checklist_items.choreId = chores.id AND checked = 1) AS checklistDone
+        """
+    }
 }

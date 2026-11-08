@@ -4,6 +4,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 import xyz.haselbach.huushalt.R
+import xyz.haselbach.huushalt.domain.Area
 import xyz.haselbach.huushalt.domain.Chore
 import xyz.haselbach.huushalt.domain.Holiday
 import xyz.haselbach.huushalt.ui.HomeState
@@ -52,8 +56,12 @@ fun HomeScreen(
     onReschedule: () -> Unit = {},
     onEndHoliday: (Holiday) -> Unit = {},
     onChangeHoliday: () -> Unit = {},
+    areas: List<Area> = emptyList(),
 ) {
     var confirmReschedule by rememberSaveable { mutableStateOf(false) }
+    // Filter the lists by room (F3.5); null shows all.
+    var areaFilter by rememberSaveable { mutableStateOf<Long?>(null) }
+    val filter: (List<Chore>) -> List<Chore> = { list -> areaFilter?.let { id -> list.filter { it.areaId == id } } ?: list }
     val holiday = state.activeHoliday
     LazyColumn(contentPadding = contentPadding) {
         if (holiday != null) {
@@ -65,6 +73,11 @@ fun HomeScreen(
         }
         item(key = "header") { header() }
         item(key = "progress") { Progress(state, streak) }
+        if (areas.isNotEmpty() && state.hasChores) {
+            item(key = "areas") {
+                AreaFilter(areas, areaFilter, onSelect = { areaFilter = it })
+            }
+        }
         when {
             !state.hasChores -> item(key = "empty") {
                 EmptyState(stringResource(R.string.home_no_chores_title), stringResource(R.string.home_no_chores_body))
@@ -73,11 +86,11 @@ fun HomeScreen(
                 EmptyState(stringResource(R.string.home_empty_title), stringResource(R.string.home_empty_body))
             }
         }
-        section(R.string.home_section_overdue, state.overdue, state.today, onOpen, onComplete) {
+        section(R.string.home_section_overdue, filter(state.overdue), state.today, onOpen, onComplete) {
             TextButton(onClick = { confirmReschedule = true }) { Text(stringResource(R.string.reschedule_action)) }
         }
-        section(R.string.home_section_today, state.dueToday, state.today, onOpen, onComplete)
-        section(R.string.home_section_upcoming, state.upcoming, state.today, onOpen, onComplete)
+        section(R.string.home_section_today, filter(state.dueToday), state.today, onOpen, onComplete)
+        section(R.string.home_section_upcoming, filter(state.upcoming), state.today, onOpen, onComplete)
     }
 
     if (confirmReschedule) {
@@ -95,6 +108,20 @@ fun HomeScreen(
                 TextButton(onClick = { confirmReschedule = false }) { Text(stringResource(R.string.action_cancel)) }
             },
         )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AreaFilter(areas: List<Area>, selected: Long?, onSelect: (Long?) -> Unit) {
+    FlowRow(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FilterChip(selected = selected == null, onClick = { onSelect(null) }, label = { Text(stringResource(R.string.filter_all)) })
+        areas.forEach { area ->
+            FilterChip(selected = selected == area.id, onClick = { onSelect(area.id) }, label = { Text(area.name) })
+        }
     }
 }
 

@@ -21,7 +21,7 @@ class MigrationTest {
     val helper = MigrationTestHelper(InstrumentationRegistry.getInstrumentation(), HuushaltDatabase::class.java)
 
     @Test
-    fun `version 1 to 2 keeps chores and completions`() = runBlocking {
+    fun `version 1 to the current version keeps chores and completions`() = runBlocking {
         val due = LocalDate.parse("2026-11-10")
         helper.createDatabase(dbName, 1).apply {
             execSQL(
@@ -38,6 +38,7 @@ class MigrationTest {
         }
 
         helper.runMigrationsAndValidate(dbName, 2, true)
+        helper.runMigrationsAndValidate(dbName, 3, true)
 
         val db = Room.databaseBuilder(
             InstrumentationRegistry.getInstrumentation().targetContext,
@@ -51,6 +52,9 @@ class MigrationTest {
             assertEquals(due, chore.chore.dueDate)
             assertEquals(due.minusWeeks(1), chore.lastDone)
             assertEquals(emptyList<HolidayEntity>(), db.holidayDao().getHolidays())
+            assertEquals(null, chore.chore.areaId)
+            assertEquals(false, chore.chore.paused)
+            assertEquals(0, chore.checklistTotal)
         } finally {
             db.close()
         }

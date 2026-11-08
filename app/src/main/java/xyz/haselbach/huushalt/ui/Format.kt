@@ -38,6 +38,7 @@ fun dueLabel(chore: Chore, today: LocalDate): String = when (val status = chore.
         if (status.date == today.plusDays(1)) stringResource(R.string.due_tomorrow) else status.date.formatShort()
     is DueStatus.Later -> stringResource(R.string.due_on, status.date.formatLong())
     DueStatus.Finished -> stringResource(R.string.due_finished)
+    DueStatus.Paused -> stringResource(R.string.due_paused)
 }
 
 /** Human readable schedule, e.g. "Alle 2 Wochen am Mi" or "4 Wochen nach dem Erledigen". */

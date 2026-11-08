@@ -15,10 +15,20 @@ data class Chore(
     val lastDone: LocalDate?,
     /** Day the chore was created; streaks start with the first chore (F7.2). */
     val createdDate: LocalDate = anchorDate,
+    val areaId: Long? = null,
+    val areaName: String? = null,
+    /** Paused chores are not due and don't count for streaks (F1.3). */
+    val paused: Boolean = false,
+    val checklistTotal: Int = 0,
+    val checklistDone: Int = 0,
 ) {
     val isFinished: Boolean get() = dueDate == null
 
+    /** Some checklist items are not ticked yet (F1.8). */
+    val checklistUnfinished: Boolean get() = checklistDone < checklistTotal
+
     fun status(today: LocalDate): DueStatus {
+        if (paused) return DueStatus.Paused
         val due = dueDate ?: return DueStatus.Finished
         return when {
             due < today -> DueStatus.Overdue(
@@ -43,4 +53,10 @@ sealed interface DueStatus {
     data class Upcoming(val date: LocalDate) : DueStatus
     data class Later(val date: LocalDate) : DueStatus
     data object Finished : DueStatus
+    data object Paused : DueStatus
 }
+
+/** A room or area (F1.4). */
+data class Area(val id: Long, val name: String)
+
+data class ChecklistItem(val id: Long, val text: String, val checked: Boolean)
