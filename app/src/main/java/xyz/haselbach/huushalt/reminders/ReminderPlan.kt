@@ -24,7 +24,7 @@ data class OpenChores(val overdue: List<Chore>, val dueToday: List<Chore>) {
             val order = compareBy<Chore> { it.dueDate }.thenBy { it.name.lowercase() }
             return OpenChores(
                 overdue = chores.filter { it.status(today) is DueStatus.Overdue }.sortedWith(order),
-                dueToday = chores.filter { it.status(today) == DueStatus.Today }.sortedWith(order),
+                dueToday = chores.filter { it.isDueNow(today) }.sortedWith(order),
             )
         }
     }

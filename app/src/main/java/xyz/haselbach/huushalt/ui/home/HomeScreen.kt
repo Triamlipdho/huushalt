@@ -57,6 +57,7 @@ fun HomeScreen(
     onEndHoliday: (Holiday) -> Unit = {},
     onChangeHoliday: () -> Unit = {},
     areas: List<Area> = emptyList(),
+    onEditChore: (Chore) -> Unit = {},
 ) {
     var confirmReschedule by rememberSaveable { mutableStateOf(false) }
     // Filter the lists by room (F3.5); null shows all.
@@ -72,6 +73,10 @@ fun HomeScreen(
             return@LazyColumn
         }
         item(key = "header") { header() }
+        // Date lists about to run out (F2.11).
+        items(state.datesRunningOut, key = { "dates-${it.id}" }) { chore ->
+            DatesRunningOutCard(chore, state.today, onClick = { onEditChore(chore) })
+        }
         item(key = "progress") { Progress(state, streak) }
         if (areas.isNotEmpty() && state.hasChores) {
             item(key = "areas") {
@@ -121,6 +126,24 @@ private fun AreaFilter(areas: List<Area>, selected: Long?, onSelect: (Long?) -> 
         FilterChip(selected = selected == null, onClick = { onSelect(null) }, label = { Text(stringResource(R.string.filter_all)) })
         areas.forEach { area ->
             FilterChip(selected = selected == area.id, onClick = { onSelect(area.id) }, label = { Text(area.name) })
+        }
+    }
+}
+
+@Composable
+private fun DatesRunningOutCard(chore: Chore, today: LocalDate, onClick: () -> Unit) {
+    val last = chore.schedule.dates.lastOrNull { it >= today }
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.dates_running_out_title, chore.name), style = MaterialTheme.typography.titleSmall)
+            Text(
+                if (last == null) {
+                    stringResource(R.string.dates_running_out_none)
+                } else {
+                    stringResource(R.string.dates_running_out_last, last.formatShort())
+                },
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
     }
 }

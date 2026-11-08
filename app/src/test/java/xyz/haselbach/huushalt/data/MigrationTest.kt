@@ -39,6 +39,7 @@ class MigrationTest {
 
         helper.runMigrationsAndValidate(dbName, 2, true)
         helper.runMigrationsAndValidate(dbName, 3, true)
+        helper.runMigrationsAndValidate(dbName, 4, true)
 
         val db = Room.databaseBuilder(
             InstrumentationRegistry.getInstrumentation().targetContext,
@@ -55,6 +56,8 @@ class MigrationTest {
             assertEquals(null, chore.chore.areaId)
             assertEquals(false, chore.chore.paused)
             assertEquals(0, chore.checklistTotal)
+            assertEquals(0, chore.chore.toleranceDays)
+            assertEquals(null, chore.chore.weekOfMonth)
         } finally {
             db.close()
         }

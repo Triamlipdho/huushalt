@@ -32,6 +32,10 @@
     </plurals>
     <string name="due_missed">%d× verpasst</string>
     <string name="due_today">Heute fällig</string>
+    <plurals name="due_in_window">
+        <item quantity="one">Fällig seit gestern</item>
+        <item quantity="other">Fällig seit %d Tagen</item>
+    </plurals>
     <string name="due_tomorrow">Morgen</string>
     <string name="due_on">Fällig am %s</string>
     <string name="due_finished">Erledigt</string>
@@ -112,7 +116,6 @@
     <string name="edit_unit_weeks">Wochen</string>
     <string name="edit_unit_months">Monate</string>
     <string name="edit_weekdays">An diesen Tagen</string>
-    <string name="edit_month_day">Am %d. des Monats (Tag des Fälligkeitsdatums)</string>
     <string name="edit_due_once">Fällig am</string>
     <string name="edit_due_next">Nächstes Mal fällig</string>
     <string name="edit_due_adjusted">Passend zum Plan: %s</string>
@@ -250,4 +253,49 @@
     <string name="checklist_unfinished_title">Checkliste nicht fertig</string>
     <string name="checklist_unfinished_body">Noch nicht alle Punkte von «%s» sind abgehakt. Trotzdem als erledigt markieren?</string>
     <string name="checklist_done_anyway">Trotzdem erledigt</string>
+
+    <!-- More schedules (F2.10 to F2.12) -->
+    <string name="edit_unit_dates">Daten</string>
+    <string name="edit_month_on_day">Am %d. des Monats</string>
+    <string name="edit_month_on_nth_weekday">Am %1$d. %2$s des Monats</string>
+    <string name="edit_month_on_last_weekday">Am letzten %s des Monats</string>
+    <string name="edit_month_help">Abgeleitet vom Datum unter «Nächstes Mal fällig».</string>
+    <string name="edit_dates">Daten</string>
+    <string name="edit_dates_empty">Noch keine Daten. Füge sie einzeln hinzu oder kopiere sie z. B. aus dem Abfallkalender deiner Gemeinde.</string>
+    <string name="edit_dates_add">Datum hinzufügen</string>
+    <string name="edit_dates_remove">%s entfernen</string>
+    <string name="edit_dates_paste">Mehrere Daten einfügen</string>
+    <string name="edit_dates_paste_apply_empty">Übernehmen</string>
+    <plurals name="edit_dates_paste_apply">
+        <item quantity="one">%d Datum übernehmen</item>
+        <item quantity="other">%d Daten übernehmen</item>
+    </plurals>
+    <string name="edit_error_dates">Bitte mindestens ein Datum erfassen.</string>
+    <string name="edit_tolerance">Spielraum</string>
+    <string name="edit_tolerance_none">Keiner</string>
+    <string name="edit_tolerance_week">1 Woche</string>
+    <string name="edit_tolerance_help">So lange nach dem Fälligkeitsdatum gilt die Aufgabe noch als pünktlich und nicht als überfällig.</string>
+    <string-array name="weekdays_long">
+        <item>Montag</item>
+        <item>Dienstag</item>
+        <item>Mittwoch</item>
+        <item>Donnerstag</item>
+        <item>Freitag</item>
+        <item>Samstag</item>
+        <item>Sonntag</item>
+    </string-array>
+    <string name="dates_running_out_title">«%s»: bald keine Daten mehr</string>
+    <string name="dates_running_out_last">Letzter Termin: %s. Tippe hier, um neue Daten zu erfassen.</string>
+    <string name="dates_running_out_none">Keine kommenden Termine. Tippe hier, um neue Daten zu erfassen.</string>
+    <string name="action_done_earlier">Früher erledigt …</string>
+    <string name="action_skip">Überspringen</string>
+    <plurals name="schedule_dates_left">
+        <item quantity="one">An bestimmten Daten (noch %d)</item>
+        <item quantity="other">An bestimmten Daten (noch %d)</item>
+    </plurals>
+    <string name="schedule_monthly_nth">Jeden Monat am %1$d. %2$s</string>
+    <string name="schedule_every_months_nth" tools:ignore="PluralsCandidate">Alle %1$d Monate am %2$d. %3$s</string>
+    <string name="schedule_monthly_last">Jeden Monat am letzten %s</string>
+    <string name="schedule_every_months_last" tools:ignore="PluralsCandidate">Alle %1$d Monate am letzten %2$s</string>
+    <string name="schedule_tolerance">%1$s, Spielraum %2$s</string>
 </resources>

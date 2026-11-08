@@ -26,6 +26,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.InputChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +49,7 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -63,6 +65,7 @@ import xyz.haselbach.huushalt.data.toBitmask
 import xyz.haselbach.huushalt.domain.Area
 import xyz.haselbach.huushalt.domain.ChecklistItem
 import xyz.haselbach.huushalt.domain.Chore
+import xyz.haselbach.huushalt.domain.DateListParser
 import xyz.haselbach.huushalt.domain.RepeatUnit
 import xyz.haselbach.huushalt.domain.Schedule
 import xyz.haselbach.huushalt.domain.ScheduleCalculator
@@ -103,6 +106,23 @@ fun ChoreEditScreen(
     var intervalText by rememberSaveable { mutableStateOf((initial?.interval ?: 1).toString()) }
     var weekdayMask by rememberSaveable { mutableIntStateOf(initial?.weekdays?.toBitmask() ?: 0) }
     var dueEpochDay by rememberSaveable { mutableLongStateOf((chore?.dueDate ?: today).toEpochDay()) }
+    // Monthly: on a day of the month, the nth weekday or the last weekday (F2.10).
+    var monthlyRule by rememberSaveable {
+        mutableStateOf(
+            when (initial?.weekOfMonth) {
+                null -> MonthlyRule.DAY
+                Schedule.LAST_WEEK -> MonthlyRule.LAST
+                else -> MonthlyRule.NTH
+            },
+        )
+    }
+    // Date list (F2.11), as epoch days.
+    val dateList = rememberSaveable(saver = dateListSaver) {
+        initial?.dates.orEmpty().map { it.toEpochDay() }.toMutableStateList()
+    }
+    var pasteText by rememberSaveable { mutableStateOf("") }
+    var showDateListPicker by rememberSaveable { mutableStateOf(false) }
+    var toleranceDays by rememberSaveable { mutableIntStateOf(chore?.toleranceDays ?: 0) }
     var showErrors by rememberSaveable { mutableStateOf(false) }
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
     var showDeleteConfirm by rememberSaveable { mutableStateOf(false) }
@@ -116,14 +136,26 @@ fun ChoreEditScreen(
     val due = LocalDate.ofEpochDay(dueEpochDay)
     val weekdays = DayOfWeek.entries.filter { weekdayMask and (1 shl (it.value - 1)) != 0 }.toSet()
     val interval = intervalText.toIntOrNull() ?: 0
-    val schedule = when (repeat) {
-        Repeat.ONCE -> Schedule.ONCE
-        Repeat.FIXED -> Schedule(ScheduleMode.FIXED, unit, interval, weekdays, due.dayOfMonth)
-        Repeat.FLEXIBLE -> Schedule(ScheduleMode.FLEXIBLE, unit, interval)
+    val dates = dateList.map(LocalDate::ofEpochDay).sorted()
+    val nthWeek = (due.dayOfMonth - 1) / 7 + 1
+    val isLastWeek = due.dayOfMonth + 7 > due.lengthOfMonth()
+    val schedule = when {
+        repeat == Repeat.ONCE -> Schedule.ONCE
+        repeat == Repeat.FIXED && unit == RepeatUnit.DATES -> Schedule(ScheduleMode.FIXED, RepeatUnit.DATES, dates = dates)
+        repeat == Repeat.FIXED && unit == RepeatUnit.MONTHS && monthlyRule != MonthlyRule.DAY -> Schedule(
+            ScheduleMode.FIXED,
+            RepeatUnit.MONTHS,
+            interval,
+            setOf(due.dayOfWeek),
+            weekOfMonth = if (monthlyRule == MonthlyRule.LAST || nthWeek > 4) Schedule.LAST_WEEK else nthWeek,
+        )
+        repeat == Repeat.FIXED -> Schedule(ScheduleMode.FIXED, unit, interval, weekdays, due.dayOfMonth)
+        else -> Schedule(ScheduleMode.FLEXIBLE, unit, interval)
     }
+    val isDateList = schedule.unit == RepeatUnit.DATES
     val scheduleError = schedule.validate()
     val nameMissing = name.isBlank()
-    val adjustedDue = if (scheduleError == null) ScheduleCalculator.initialDueDate(schedule, due) else due
+    val adjustedDue = if (scheduleError == null) ScheduleCalculator.initialDueDate(schedule, if (isDateList) today else due) else due
 
     fun ensureWeekday() {
         if (repeat == Repeat.FIXED && unit == RepeatUnit.WEEKS && weekdayMask == 0) {
@@ -144,10 +176,11 @@ fun ChoreEditScreen(
                 name,
                 notes,
                 schedule,
-                due,
+                if (isDateList) today else due,
                 areaId = existing?.id ?: areaId.takeIf { typed == null },
                 newAreaName = typed.takeIf { existing == null },
                 checklist = checklist.toList(),
+                toleranceDays = if (schedule.isRepeating) toleranceDays else 0,
             ),
         )
     }
@@ -240,12 +273,13 @@ fun ChoreEditScreen(
                 }
                 RepeatOption(repeat == Repeat.FLEXIBLE, R.string.edit_repeat_flexible, R.string.edit_repeat_flexible_help) {
                     repeat = Repeat.FLEXIBLE
+                    if (unit == RepeatUnit.DATES) unit = RepeatUnit.WEEKS
                 }
             }
 
             if (repeat != Repeat.ONCE) {
                 val intervalError = showErrors && scheduleError == ScheduleError.INTERVAL_OUT_OF_RANGE
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (!isDateList) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.edit_every))
                     OutlinedTextField(
                         value = intervalText,
@@ -260,10 +294,11 @@ fun ChoreEditScreen(
                     Text(stringResource(R.string.edit_error_interval), color = MaterialTheme.colorScheme.error)
                 }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(
+                    listOfNotNull(
                         RepeatUnit.DAYS to R.string.edit_unit_days,
                         RepeatUnit.WEEKS to R.string.edit_unit_weeks,
                         RepeatUnit.MONTHS to R.string.edit_unit_months,
+                        (RepeatUnit.DATES to R.string.edit_unit_dates).takeIf { repeat == Repeat.FIXED },
                     ).forEach { (value, label) ->
                         FilterChip(
                             selected = unit == value,
@@ -293,24 +328,82 @@ fun ChoreEditScreen(
                     }
                 }
                 if (repeat == Repeat.FIXED && unit == RepeatUnit.MONTHS) {
-                    Text(stringResource(R.string.edit_month_day, due.dayOfMonth), style = MaterialTheme.typography.bodyMedium)
+                    val dayName = stringArrayResource(R.array.weekdays_long)[due.dayOfWeek.value - 1]
+                    Column(Modifier.selectableGroup()) {
+                        RepeatOption(
+                            monthlyRule == MonthlyRule.DAY,
+                            stringResource(R.string.edit_month_on_day, due.dayOfMonth),
+                        ) { monthlyRule = MonthlyRule.DAY }
+                        if (nthWeek <= 4) {
+                            RepeatOption(
+                                monthlyRule == MonthlyRule.NTH,
+                                stringResource(R.string.edit_month_on_nth_weekday, nthWeek, dayName),
+                            ) { monthlyRule = MonthlyRule.NTH }
+                        }
+                        if (isLastWeek) {
+                            RepeatOption(
+                                monthlyRule == MonthlyRule.LAST || (monthlyRule == MonthlyRule.NTH && nthWeek > 4),
+                                stringResource(R.string.edit_month_on_last_weekday, dayName),
+                            ) { monthlyRule = MonthlyRule.LAST }
+                        }
+                    }
+                    Text(
+                        stringResource(R.string.edit_month_help),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
-            }
+                if (isDateList) {
+                    DateListEditor(
+                        dates = dates,
+                        today = today,
+                        pasteText = pasteText,
+                        onPasteTextChange = { pasteText = it },
+                        onApplyPaste = {
+                            val parsed = DateListParser.parse(pasteText).map { it.toEpochDay() }
+                            dateList.addAll(parsed.filter { it !in dateList })
+                            pasteText = ""
+                        },
+                        onAdd = { showDateListPicker = true },
+                        onRemove = { dateList.remove(it.toEpochDay()) },
+                        showError = showErrors && scheduleError == ScheduleError.NO_DATES,
+                    )
+                }
 
-            Text(
-                stringResource(if (repeat == Repeat.ONCE) R.string.edit_due_once else R.string.edit_due_next),
-                style = MaterialTheme.typography.titleSmall,
-            )
-            OutlinedButton(onClick = { showDatePicker = true }) {
-                Icon(Icons.Filled.DateRange, contentDescription = null)
-                Text(due.formatLong(), modifier = Modifier.padding(start = 8.dp))
-            }
-            if (adjustedDue != due) {
+                // Tolerance window (F2.12)
+                Text(stringResource(R.string.edit_tolerance), style = MaterialTheme.typography.titleSmall)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TOLERANCE_OPTIONS.forEach { days ->
+                        FilterChip(
+                            selected = toleranceDays == days,
+                            onClick = { toleranceDays = days },
+                            label = { Text(toleranceLabel(days)) },
+                        )
+                    }
+                }
                 Text(
-                    stringResource(R.string.edit_due_adjusted, adjustedDue.formatShort()),
-                    style = MaterialTheme.typography.bodyMedium,
+                    stringResource(R.string.edit_tolerance_help),
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+
+            if (!isDateList) {
+                Text(
+                    stringResource(if (repeat == Repeat.ONCE) R.string.edit_due_once else R.string.edit_due_next),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                OutlinedButton(onClick = { showDatePicker = true }) {
+                    Icon(Icons.Filled.DateRange, contentDescription = null)
+                    Text(due.formatLong(), modifier = Modifier.padding(start = 8.dp))
+                }
+                if (adjustedDue != null && adjustedDue != due) {
+                    Text(
+                        stringResource(R.string.edit_due_adjusted, adjustedDue.formatShort()),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
             // Checklist (F1.7)
@@ -353,6 +446,18 @@ fun ChoreEditScreen(
         )
     }
 
+    if (showDateListPicker) {
+        LocalDatePickerDialog(
+            initial = dates.lastOrNull()?.plusWeeks(2)?.takeIf { it >= today } ?: today,
+            earliest = today,
+            onDismiss = { showDateListPicker = false },
+            onConfirm = {
+                if (it.toEpochDay() !in dateList) dateList.add(it.toEpochDay())
+                showDateListPicker = false
+            },
+        )
+    }
+
     if (showDeleteConfirm && chore != null) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
@@ -370,6 +475,94 @@ fun ChoreEditScreen(
         )
     }
 }
+
+@Composable
+private fun RepeatOption(selected: Boolean, title: String, onSelect: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(selected = selected, onClick = onSelect, role = Role.RadioButton)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = null)
+        Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = 12.dp))
+    }
+}
+
+/** Dates of a date list (F2.11): added one by one or pasted in bulk. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun DateListEditor(
+    dates: List<LocalDate>,
+    today: LocalDate,
+    pasteText: String,
+    onPasteTextChange: (String) -> Unit,
+    onApplyPaste: () -> Unit,
+    onAdd: () -> Unit,
+    onRemove: (LocalDate) -> Unit,
+    showError: Boolean,
+) {
+    Text(stringResource(R.string.edit_dates), style = MaterialTheme.typography.titleSmall)
+    if (dates.isEmpty()) {
+        Text(
+            stringResource(if (showError) R.string.edit_error_dates else R.string.edit_dates_empty),
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (showError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        dates.forEach { date ->
+            InputChip(
+                selected = false,
+                enabled = true,
+                onClick = { onRemove(date) },
+                label = { Text(if (date.year == today.year) date.formatShort() else date.formatLong()) },
+                trailingIcon = {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = stringResource(R.string.edit_dates_remove, date.formatLong()),
+                    )
+                },
+            )
+        }
+    }
+    TextButton(onClick = onAdd) {
+        Icon(Icons.Filled.Add, contentDescription = null)
+        Text(stringResource(R.string.edit_dates_add), modifier = Modifier.padding(start = 8.dp))
+    }
+    OutlinedTextField(
+        value = pasteText,
+        onValueChange = onPasteTextChange,
+        label = { Text(stringResource(R.string.edit_dates_paste)) },
+        placeholder = { Text("12.01.2027, 26.01.2027, …") },
+        minLines = 2,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    TextButton(onClick = onApplyPaste, enabled = DateListParser.parse(pasteText).isNotEmpty()) {
+        val count = DateListParser.parse(pasteText).size
+        Text(
+            if (count == 0) stringResource(R.string.edit_dates_paste_apply_empty)
+            else pluralStringResource(R.plurals.edit_dates_paste_apply, count, count),
+        )
+    }
+}
+
+@Composable
+private fun toleranceLabel(days: Int): String = when (days) {
+    0 -> stringResource(R.string.edit_tolerance_none)
+    7 -> stringResource(R.string.edit_tolerance_week)
+    else -> pluralStringResource(R.plurals.interval_days, days, days)
+}
+
+private val TOLERANCE_OPTIONS = listOf(0, 1, 2, 3, 7)
+
+private enum class MonthlyRule { DAY, NTH, LAST }
+
+private val dateListSaver = listSaver<SnapshotStateList<Long>, Long>(
+    save = { it.toList() },
+    restore = { it.toMutableStateList() },
+)
 
 @Composable
 private fun RepeatOption(selected: Boolean, title: Int, help: Int, onSelect: () -> Unit) {
@@ -397,6 +590,7 @@ data class ChoreDraft(
     val areaId: Long?,
     val newAreaName: String?,
     val checklist: List<ChecklistDraft>,
+    val toleranceDays: Int = 0,
 )
 
 private val checklistSaver = listSaver<SnapshotStateList<ChecklistDraft>, String>(

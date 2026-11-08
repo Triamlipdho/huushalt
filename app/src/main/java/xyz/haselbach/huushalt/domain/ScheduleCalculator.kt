@@ -18,8 +18,11 @@ import java.time.temporal.TemporalAdjusters
  */
 object ScheduleCalculator {
 
-    /** Due date of a newly created or edited chore whose next due date was set to [anchor]. */
-    fun initialDueDate(schedule: Schedule, anchor: LocalDate): LocalDate =
+    /**
+     * Due date of a newly created or edited chore whose next due date was set to [anchor]. Null for
+     * a date list without dates from [anchor] on.
+     */
+    fun initialDueDate(schedule: Schedule, anchor: LocalDate): LocalDate? =
         if (schedule.mode == ScheduleMode.FIXED && schedule.isRepeating) {
             firstOccurrenceOnOrAfter(schedule, anchor, anchor)
         } else {
@@ -59,16 +62,21 @@ object ScheduleCalculator {
         if (schedule.mode != ScheduleMode.FIXED || !schedule.isRepeating) return 1
         var count = 0
         var occurrence = due
-        while (occurrence < today && count < MAX_MISSED_COUNT) {
+        var current: LocalDate? = occurrence
+        while (current != null && current < today && count < MAX_MISSED_COUNT) {
             count++
-            occurrence = firstOccurrenceOnOrAfter(schedule, anchor, occurrence.plusDays(1))
+            current = firstOccurrenceOnOrAfter(schedule, anchor, current.plusDays(1))
         }
         return count
     }
 
-    /** First occurrence of a fixed repeating [schedule] that is on or after both [date] and [anchor]. */
-    fun firstOccurrenceOnOrAfter(schedule: Schedule, anchor: LocalDate, date: LocalDate): LocalDate {
+    /**
+     * First occurrence of a fixed repeating [schedule] that is on or after both [date] and [anchor].
+     * Null only for a date list whose dates are all before [date].
+     */
+    fun firstOccurrenceOnOrAfter(schedule: Schedule, anchor: LocalDate, date: LocalDate): LocalDate? {
         require(schedule.isRepeating) { "One-off chores have no occurrences" }
+        if (schedule.unit == RepeatUnit.DATES) return schedule.dates.sorted().firstOrNull { it >= date }
         val from = if (date > anchor) date else anchor
         val n = schedule.interval.toLong()
         return when (schedule.unit) {
@@ -77,10 +85,34 @@ object ScheduleCalculator {
                 anchor.plusDays(ceilDiv(diff, n) * n)
             }
             RepeatUnit.WEEKS -> nextWeeklyOccurrence(schedule, anchor, from)
-            RepeatUnit.MONTHS -> nextMonthlyOccurrence(schedule, anchor, from)
-            RepeatUnit.NONE -> error("unreachable")
+            RepeatUnit.MONTHS ->
+                if (schedule.weekOfMonth != null) nextNthWeekdayOccurrence(schedule, anchor, from)
+                else nextMonthlyOccurrence(schedule, anchor, from)
+            RepeatUnit.NONE, RepeatUnit.DATES -> error("unreachable")
         }
     }
+
+    /** E.g. "every month on the 2nd Tuesday" or "every 3 months on the last Friday" (F2.10). */
+    private fun nextNthWeekdayOccurrence(schedule: Schedule, anchor: LocalDate, from: LocalDate): LocalDate {
+        val weekday = schedule.weekdays.single()
+        val week = schedule.weekOfMonth!!
+        val anchorMonth = YearMonth.from(anchor)
+        val n = schedule.interval.toLong()
+        val diff = ChronoUnit.MONTHS.between(anchorMonth, YearMonth.from(from))
+        var month = anchorMonth.plusMonths(ceilDiv(diff, n) * n)
+        while (true) {
+            val candidate = nthWeekdayOf(month, weekday, week)
+            if (candidate >= from) return candidate
+            month = month.plusMonths(n)
+        }
+    }
+
+    fun nthWeekdayOf(month: YearMonth, weekday: DayOfWeek, week: Int): LocalDate =
+        if (week == Schedule.LAST_WEEK) {
+            month.atEndOfMonth().with(TemporalAdjusters.previousOrSame(weekday))
+        } else {
+            month.atDay(1).with(TemporalAdjusters.nextOrSame(weekday)).plusWeeks(week - 1L)
+        }
 
     private fun nextWeeklyOccurrence(schedule: Schedule, anchor: LocalDate, from: LocalDate): LocalDate {
         val weekdays = schedule.weekdays.ifEmpty { setOf(anchor.dayOfWeek) }
@@ -116,7 +148,7 @@ object ScheduleCalculator {
             RepeatUnit.DAYS -> date.plusDays(n)
             RepeatUnit.WEEKS -> date.plusWeeks(n)
             RepeatUnit.MONTHS -> date.plusMonths(n)
-            RepeatUnit.NONE -> date
+            RepeatUnit.NONE, RepeatUnit.DATES -> date
         }
     }
 

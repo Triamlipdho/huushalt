@@ -2,6 +2,7 @@ package xyz.haselbach.huushalt.ui
 
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -9,6 +10,7 @@ import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import org.junit.Before
 import org.junit.Rule
@@ -128,7 +130,7 @@ class ChoreFlowTest {
         waitFor("Noch keine Aufgaben")
         compose.onNodeWithContentDescription("Neue Aufgabe").performClick()
         compose.onNodeWithText("Name").performTextInput("Fenster putzen")
-        compose.onNodeWithText(today()).performClick()
+        compose.onNodeWithText(today()).performScrollTo().performClick()
         waitFor("OK")
         compose.onNodeWithText("Abbrechen").performClick()
         compose.onNodeWithText("Speichern").performClick()
@@ -136,6 +138,8 @@ class ChoreFlowTest {
         waitFor("Fenster putzen")
         compose.onNodeWithText("Fenster putzen").performClick()
         compose.onNodeWithContentDescription("Bearbeiten").performClick()
+        // The editor appears once the checklist is loaded from the database.
+        compose.waitUntilAtLeastOneExists(hasContentDescription("Löschen"), timeoutMillis = 5_000)
         compose.onNodeWithContentDescription("Löschen").performClick()
         waitFor("«Fenster putzen» löschen?")
         compose.onNodeWithText("Löschen").performClick()

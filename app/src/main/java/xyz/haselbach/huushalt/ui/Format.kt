@@ -34,6 +34,7 @@ fun dueLabel(chore: Chore, today: LocalDate): String = when (val status = chore.
         if (status.missed > 1) days + " · " + stringResource(R.string.due_missed, status.missed) else days
     }
     DueStatus.Today -> stringResource(R.string.due_today)
+    is DueStatus.InWindow -> pluralStringResource(R.plurals.due_in_window, status.daysSinceDue, status.daysSinceDue)
     is DueStatus.Upcoming ->
         if (status.date == today.plusDays(1)) stringResource(R.string.due_tomorrow) else status.date.formatShort()
     is DueStatus.Later -> stringResource(R.string.due_on, status.date.formatLong())
@@ -44,9 +45,21 @@ fun dueLabel(chore: Chore, today: LocalDate): String = when (val status = chore.
 /** Human readable schedule, e.g. "Alle 2 Wochen am Mi" or "4 Wochen nach dem Erledigen". */
 @Composable
 @ReadOnlyComposable
-fun scheduleLabel(schedule: Schedule): String {
+fun scheduleLabel(schedule: Schedule, toleranceDays: Int = 0, today: LocalDate = LocalDate.now()): String {
+    val base = baseScheduleLabel(schedule, today)
+    if (toleranceDays == 0) return base
+    return stringResource(R.string.schedule_tolerance, base, pluralStringResource(R.plurals.interval_days, toleranceDays, toleranceDays))
+}
+
+@Composable
+@ReadOnlyComposable
+private fun baseScheduleLabel(schedule: Schedule, today: LocalDate): String {
     val n = schedule.interval
     if (!schedule.isRepeating) return stringResource(R.string.schedule_once)
+    if (schedule.unit == RepeatUnit.DATES) {
+        val left = schedule.dates.count { it >= today }
+        return pluralStringResource(R.plurals.schedule_dates_left, left, left)
+    }
     if (schedule.mode == ScheduleMode.FLEXIBLE) {
         val interval = when (schedule.unit) {
             RepeatUnit.DAYS -> pluralStringResource(R.plurals.interval_days, n, n)
@@ -64,7 +77,16 @@ fun scheduleLabel(schedule: Schedule): String {
             if (n == 1) stringResource(R.string.schedule_weekly_on, days)
             else stringResource(R.string.schedule_every_weeks_on, n, days)
         }
-        else -> {
+        else -> if (schedule.weekOfMonth != null) {
+            val dayName = stringArrayResource(R.array.weekdays_long)[schedule.weekdays.single().value - 1]
+            val week = schedule.weekOfMonth
+            when {
+                week == Schedule.LAST_WEEK && n == 1 -> stringResource(R.string.schedule_monthly_last, dayName)
+                week == Schedule.LAST_WEEK -> stringResource(R.string.schedule_every_months_last, n, dayName)
+                n == 1 -> stringResource(R.string.schedule_monthly_nth, week, dayName)
+                else -> stringResource(R.string.schedule_every_months_nth, n, week, dayName)
+            }
+        } else {
             val day = schedule.dayOfMonth ?: 1
             if (n == 1) stringResource(R.string.schedule_monthly_on, day)
             else stringResource(R.string.schedule_every_months_on, n, day)
