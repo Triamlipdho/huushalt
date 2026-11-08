@@ -74,6 +74,7 @@ private object Route {
     val tabs = setOf(TODAY, ALL, PROGRESS)
     fun detail(id: Long) = "detail:$id"
     fun edit(id: Long?) = "edit:${id ?: "new"}"
+    fun copy(id: Long) = "copy:$id"
 }
 
 private val stackSaver = listSaver<SnapshotStateList<String>, String>(
@@ -81,9 +82,14 @@ private val stackSaver = listSaver<SnapshotStateList<String>, String>(
     restore = { it.toMutableStateList() },
 )
 
+/** A request from outside the app (notification, app shortcut) to show a screen; [seq] makes repeats distinct. */
+data class NavRequest(val target: NavTarget, val seq: Int)
+
+enum class NavTarget { TODAY, NEW_CHORE, CATALOG }
+
 @Composable
 fun HuushaltApp(
-    openTodayRequests: Int = 0,
+    navRequest: NavRequest? = null,
     viewModel: ChoresViewModel = viewModel(factory = ChoresViewModel.Factory),
     settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory),
     dataViewModel: DataViewModel = viewModel(factory = DataViewModel.Factory),
@@ -114,11 +120,16 @@ fun HuushaltApp(
     }
     BackHandler(enabled = stack.size > 1) { back() }
 
-    // A tapped reminder notification shows the daily overview (F5.3).
-    LaunchedEffect(openTodayRequests) {
-        if (openTodayRequests > 0) {
-            stack.clear()
-            stack.add(Route.TODAY)
+    // A tapped reminder shows the daily overview (F5.3); app shortcuts open "Neue Aufgabe" or the
+    // suggestions (F9.7).
+    LaunchedEffect(navRequest) {
+        val target = navRequest?.target ?: return@LaunchedEffect
+        stack.clear()
+        stack.add(Route.TODAY)
+        when (target) {
+            NavTarget.TODAY -> Unit
+            NavTarget.NEW_CHORE -> stack.add(Route.edit(null))
+            NavTarget.CATALOG -> stack.add(Route.CATALOG)
         }
     }
 
@@ -220,6 +231,7 @@ fun HuushaltApp(
             } else if (route == Route.ALL) {
                 AllChoresScreen(
                     chores = allChores,
+                    showAreaSort = allAreas.isNotEmpty(),
                     today = today,
                     contentPadding = padding,
                     onOpen = { open(Route.detail(it.id)) },
@@ -262,18 +274,23 @@ fun HuushaltApp(
                 onPausedChange = { viewModel.setPaused(id, it) },
                 onCompleteOn = { date -> viewModel.complete(chore, date) },
                 onSkip = { viewModel.skip(id) },
+                onDuplicate = { open(Route.copy(id)) },
             )
         }
 
-        route.startsWith("edit:") -> {
-            val id = route.removePrefix("edit:").toLongOrNull()
-            val chore = id?.let { choreId -> allChores.find { it.id == choreId } }
-            if (id != null && chore == null) {
+        route.startsWith("edit:") || route.startsWith("copy:") -> {
+            val isCopy = route.startsWith("copy:")
+            val sourceId = route.substringAfter(':').toLongOrNull()
+            val source = sourceId?.let { choreId -> allChores.find { it.id == choreId } }
+            if (sourceId != null && source == null) {
                 LaunchedEffect(route) { back() }
                 return
             }
+            // Editing keeps the id; a copy (F1.10) is saved as a new chore.
+            val id = if (isCopy) null else sourceId
+            val chore = if (isCopy) null else source
             // The checklist must be loaded before the editor starts, it initialises its fields once.
-            val checklist by remember(id) { id?.let { viewModel.checklist(it) } ?: flowOf(emptyList()) }
+            val checklist by remember(sourceId) { sourceId?.let { viewModel.checklist(it) } ?: flowOf(emptyList()) }
                 .collectAsStateWithLifecycle(null)
             val initialChecklist = checklist ?: return
             ChoreEditScreen(
@@ -282,6 +299,8 @@ fun HuushaltApp(
                 areas = allAreas,
                 initialChecklist = initialChecklist,
                 firstDayOfWeek = appSettings.firstDayOfWeek,
+                copyOf = if (isCopy) source else null,
+                existingNames = allChores.map { it.name }.toSet(),
                 onClose = ::back,
                 onSave = { draft ->
                     viewModel.save(
@@ -295,7 +314,8 @@ fun HuushaltApp(
                         draft.newAreaName,
                         draft.toleranceDays,
                     )
-                    back()
+                    // A saved copy shows up in the list, not on the original's detail screen.
+                    if (isCopy) backToTab() else back()
                 },
                 onDelete = {
                     if (id != null) viewModel.delete(id)

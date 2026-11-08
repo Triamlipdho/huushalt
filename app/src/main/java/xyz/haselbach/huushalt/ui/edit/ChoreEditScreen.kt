@@ -33,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -65,6 +66,8 @@ import xyz.haselbach.huushalt.data.toBitmask
 import xyz.haselbach.huushalt.domain.Area
 import xyz.haselbach.huushalt.domain.ChecklistItem
 import xyz.haselbach.huushalt.domain.Chore
+import xyz.haselbach.huushalt.domain.ChoreCatalog
+import xyz.haselbach.huushalt.domain.ChoreTemplate
 import xyz.haselbach.huushalt.domain.DateListParser
 import xyz.haselbach.huushalt.domain.RepeatUnit
 import xyz.haselbach.huushalt.domain.Schedule
@@ -89,10 +92,18 @@ fun ChoreEditScreen(
     areas: List<Area> = emptyList(),
     initialChecklist: List<ChecklistItem> = emptyList(),
     firstDayOfWeek: DayOfWeek = DayOfWeek.MONDAY,
+    /** A chore to copy when creating a new one ("Duplizieren", F1.10). */
+    copyOf: Chore? = null,
+    /** Names of existing chores; their catalogue suggestions are not offered again. */
+    existingNames: Set<String> = emptySet(),
 ) {
-    val initial = chore?.schedule
-    var name by rememberSaveable { mutableStateOf(chore?.name ?: "") }
-    var notes by rememberSaveable { mutableStateOf(chore?.notes ?: "") }
+    // Values come from the chore being edited, or the one being copied.
+    val source = chore ?: copyOf
+    val initial = source?.schedule
+    var name by rememberSaveable {
+        mutableStateOf(chore?.name ?: copyOf?.name?.let { it + " (Kopie)" } ?: "")
+    }
+    var notes by rememberSaveable { mutableStateOf(source?.notes ?: "") }
     var repeat by rememberSaveable {
         mutableStateOf(
             when {
@@ -107,6 +118,7 @@ fun ChoreEditScreen(
     var intervalText by rememberSaveable { mutableStateOf((initial?.interval ?: 1).toString()) }
     var weekdayMask by rememberSaveable { mutableIntStateOf(initial?.weekdays?.toBitmask() ?: 0) }
     var dueEpochDay by rememberSaveable { mutableLongStateOf((chore?.dueDate ?: today).toEpochDay()) }
+    var suggestionPicked by rememberSaveable { mutableStateOf(false) }
     // Monthly: on a day of the month, the nth weekday or the last weekday (F2.10).
     var monthlyRule by rememberSaveable {
         mutableStateOf(
@@ -123,15 +135,30 @@ fun ChoreEditScreen(
     }
     var pasteText by rememberSaveable { mutableStateOf("") }
     var showDateListPicker by rememberSaveable { mutableStateOf(false) }
-    var toleranceDays by rememberSaveable { mutableIntStateOf(chore?.toleranceDays ?: 0) }
+    var toleranceDays by rememberSaveable { mutableIntStateOf(source?.toleranceDays ?: 0) }
     var showErrors by rememberSaveable { mutableStateOf(false) }
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
     var showDeleteConfirm by rememberSaveable { mutableStateOf(false) }
-    var areaId by rememberSaveable { mutableStateOf(chore?.areaId) }
+    var areaId by rememberSaveable { mutableStateOf(source?.areaId) }
     // A new room typed in directly, created together with the chore. Null: an existing room or none.
     var newAreaName by rememberSaveable { mutableStateOf<String?>(null) }
     val checklist = rememberSaveable(saver = checklistSaver) {
-        initialChecklist.map { ChecklistDraft(it.id, it.text) }.toMutableStateList()
+        // A copy gets new checklist items (no ids), the edited chore keeps its own.
+        initialChecklist.map { ChecklistDraft(if (chore != null) it.id else null, it.text) }.toMutableStateList()
+    }
+
+    /** Quick create: fill the form from a catalogue suggestion. */
+    fun applyTemplate(template: ChoreTemplate) {
+        name = template.name
+        repeat = if (template.schedule.mode == ScheduleMode.FIXED) Repeat.FIXED else Repeat.FLEXIBLE
+        unit = template.schedule.unit
+        intervalText = template.schedule.interval.toString()
+        checklist.clear()
+        checklist.addAll(template.checklist.map { ChecklistDraft(null, it) })
+        val existingArea = template.area?.let { a -> areas.find { it.name.equals(a, ignoreCase = true) } }
+        areaId = existingArea?.id
+        newAreaName = if (existingArea == null) template.area else null
+        suggestionPicked = true
     }
 
     val due = LocalDate.ofEpochDay(dueEpochDay)
@@ -229,6 +256,9 @@ fun ChoreEditScreen(
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
                 modifier = Modifier.fillMaxWidth(),
             )
+            if (chore == null && copyOf == null && !suggestionPicked) {
+                QuickSuggestions(query = name, existingNames = existingNames, onPick = ::applyTemplate)
+            }
             OutlinedTextField(
                 value = notes,
                 onValueChange = { notes = it },
@@ -638,3 +668,34 @@ private fun AreaPicker(
         }
     }
 }
+
+/**
+ * Quick create: catalogue suggestions matching what is typed (or the first few while the name is
+ * empty). One tap fills name, schedule, room and checklist.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun QuickSuggestions(query: String, existingNames: Set<String>, onPick: (ChoreTemplate) -> Unit) {
+    val existing = existingNames.map { it.lowercase() }.toSet()
+    val available = ChoreCatalog.templates.filter { it.name.lowercase() !in existing }
+    val matches = if (query.isBlank()) {
+        available.take(QUICK_SUGGESTIONS)
+    } else {
+        available.filter { it.name.contains(query.trim(), ignoreCase = true) }.take(QUICK_SUGGESTIONS)
+    }
+    if (matches.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            stringResource(R.string.edit_suggestions),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            matches.forEach { template ->
+                SuggestionChip(onClick = { onPick(template) }, label = { Text(template.name) })
+            }
+        }
+    }
+}
+
+private const val QUICK_SUGGESTIONS = 6

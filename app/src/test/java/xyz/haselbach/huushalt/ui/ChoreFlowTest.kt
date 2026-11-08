@@ -81,7 +81,7 @@ class ChoreFlowTest {
         compose.onNode(hasText("Jede Woche am ", substring = true)).assertExists()
 
         compose.onNodeWithText("Erledigt").performClick()
-        waitFor("Zuletzt erledigt")
+        compose.waitUntilAtLeastOneExists(hasText("Zuletzt erledigt am", substring = true), timeoutMillis = 5_000)
         compose.waitUntilDoesNotExist(hasText("Noch nicht erledigt."), timeoutMillis = 5_000)
         screenshot("5-detail")
 

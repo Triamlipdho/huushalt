@@ -12,7 +12,7 @@
     <!-- Home (F3) -->
     <string name="home_title">Heute</string>
     <string name="home_section_overdue">Überfällig</string>
-    <string name="home_section_today">Heute</string>
+    <string name="home_section_today">Heute fällig</string>
     <string name="home_section_upcoming">Demnächst</string>
     <string name="home_progress" tools:ignore="PluralsCandidate">%1$d von %2$d erledigt</string>
     <string name="home_empty_title">Alles erledigt für heute</string>
@@ -90,11 +90,8 @@
     <string name="postpone_pick_date">Datum wählen …</string>
 
     <!-- Detail and history (F6) -->
-    <string name="detail_next_due">Nächstes Mal</string>
-    <string name="detail_last_done">Zuletzt erledigt</string>
-    <string name="detail_never_done">Noch nie</string>
-    <string name="detail_schedule">Wiederholung</string>
-    <string name="detail_notes">Notizen</string>
+    <string name="detail_last_done_on">Zuletzt erledigt am %s</string>
+    <string name="detail_never_done_long">Noch nie erledigt</string>
     <string name="detail_history">Verlauf</string>
     <string name="detail_history_empty">Noch nicht erledigt.</string>
 
@@ -104,6 +101,7 @@
     <string name="edit_name">Name</string>
     <string name="edit_name_hint">z. B. Staubsaugen</string>
     <string name="edit_notes">Notizen (optional)</string>
+    <string name="edit_suggestions">Vorschläge – antippen zum Übernehmen</string>
     <string name="edit_repeat">Wiederholen</string>
     <string name="edit_repeat_once">Einmalig</string>
     <string name="edit_repeat_once_help">Nur einmal erledigen.</string>
@@ -170,6 +168,7 @@
     </plurals>
     <string name="streak_home">🔥 %s in Folge alles erledigt</string>
     <string name="streak_title">Alles erledigt in Folge</string>
+    <string name="streak_none">Erledige heute alles Fällige, um eine Serie zu starten.</string>
     <string name="streak_best">Bestwert: %s</string>
     <string name="streak_free_day_note">Ein verpasster Tag pro Woche zählt nicht. Verschieben vor dem Fälligkeitsdatum ist kein Verpassen.</string>
     <string name="stats_this_week">Diese Woche</string>
@@ -346,4 +345,15 @@
         <item quantity="one">%d Eintrag im Verlauf</item>
         <item quantity="other">%d Einträge im Verlauf</item>
     </plurals>
+
+    <!-- Duplicate, search, app shortcuts (F1.10, F3.7, F9.7) -->
+    <string name="action_duplicate">Duplizieren</string>
+    <string name="all_search">Aufgaben durchsuchen</string>
+    <string name="all_search_clear">Suche löschen</string>
+    <string name="all_search_empty_title">Nichts gefunden</string>
+    <string name="all_search_empty_body">Keine Aufgabe passt zu «%s».</string>
+    <string name="shortcut_new_short">Neue Aufgabe</string>
+    <string name="shortcut_new_long">Neue Aufgabe erfassen</string>
+    <string name="shortcut_catalog_short">Vorschläge</string>
+    <string name="shortcut_catalog_long">Aufgaben aus Vorschlägen hinzufügen</string>
 </resources>

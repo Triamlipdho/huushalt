@@ -14,10 +14,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -37,7 +42,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -46,6 +53,7 @@ import xyz.haselbach.huushalt.R
 import xyz.haselbach.huushalt.data.CompletionEntity
 import xyz.haselbach.huushalt.domain.ChecklistItem
 import xyz.haselbach.huushalt.domain.Chore
+import xyz.haselbach.huushalt.domain.DueStatus
 import xyz.haselbach.huushalt.ui.components.LocalDatePickerDialog
 import xyz.haselbach.huushalt.ui.components.SectionHeader
 import xyz.haselbach.huushalt.ui.dueLabel
@@ -75,6 +83,8 @@ fun ChoreDetailScreen(
     onCompleteOn: (LocalDate) -> Unit = {},
     /** Skip this occurrence (F4.5). */
     onSkip: () -> Unit = {},
+    /** Create a new chore with the same settings (F1.10). */
+    onDuplicate: () -> Unit = {},
 ) {
     var showPostpone by rememberSaveable { mutableStateOf(false) }
     var pickDoneDate by rememberSaveable { mutableStateOf(false) }
@@ -99,45 +109,7 @@ fun ChoreDetailScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         LazyColumn(contentPadding = padding) {
-            item(key = "facts") {
-                Column {
-                    Fact(stringResource(R.string.detail_next_due), dueLabel(chore, today))
-                    Fact(stringResource(R.string.detail_schedule), scheduleLabel(chore.schedule, chore.toleranceDays, today))
-                    chore.areaName?.let { Fact(stringResource(R.string.area), it) }
-                    Fact(
-                        stringResource(R.string.detail_last_done),
-                        chore.lastDone?.formatLong() ?: stringResource(R.string.detail_never_done),
-                    )
-                    if (chore.notes.isNotBlank()) Fact(stringResource(R.string.detail_notes), chore.notes)
-                    if (streak != null && streak >= 2) {
-                        Text(
-                            stringResource(R.string.detail_chore_streak, streak),
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
-                }
-            }
-            if (checklist.isNotEmpty()) {
-                item(key = "checklist-header") {
-                    SectionHeader(
-                        stringResource(R.string.checklist) + " " +
-                            stringResource(R.string.checklist_progress, checklist.count { it.checked }, checklist.size),
-                    )
-                }
-                items(checklist, key = { "item-${it.id}" }) { item ->
-                    ListItem(
-                        modifier = Modifier.toggleable(
-                            value = item.checked,
-                            enabled = !chore.paused,
-                            role = Role.Checkbox,
-                            onValueChange = { onToggleItem(item) },
-                        ),
-                        leadingContent = { Checkbox(checked = item.checked, onCheckedChange = null, enabled = !chore.paused) },
-                        headlineContent = { Text(item.text) },
-                    )
-                }
-            }
+            item(key = "summary") { Summary(chore, today, streak) }
             if (chore.paused) {
                 item(key = "paused") {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -166,7 +138,28 @@ fun ChoreDetailScreen(
                             TextButton(onClick = onSkip) { Text(stringResource(R.string.action_skip)) }
                         }
                         TextButton(onClick = { onPausedChange(true) }) { Text(stringResource(R.string.action_pause)) }
+                        TextButton(onClick = onDuplicate) { Text(stringResource(R.string.action_duplicate)) }
                     }
+                }
+            }
+            if (checklist.isNotEmpty()) {
+                item(key = "checklist-header") {
+                    SectionHeader(
+                        stringResource(R.string.checklist) + " " +
+                            stringResource(R.string.checklist_progress, checklist.count { it.checked }, checklist.size),
+                    )
+                }
+                items(checklist, key = { "item-${it.id}" }) { item ->
+                    ListItem(
+                        modifier = Modifier.toggleable(
+                            value = item.checked,
+                            enabled = !chore.paused,
+                            role = Role.Checkbox,
+                            onValueChange = { onToggleItem(item) },
+                        ),
+                        leadingContent = { Checkbox(checked = item.checked, onCheckedChange = null, enabled = !chore.paused) },
+                        headlineContent = { Text(item.text) },
+                    )
                 }
             }
             item(key = "history-header") {
@@ -231,12 +224,39 @@ fun ChoreDetailScreen(
     }
 }
 
+/**
+ * Compact summary: the status large (red when overdue), then schedule, room, last done, notes and
+ * the chore's streak as short rows with icons.
+ */
 @Composable
-private fun Fact(label: String, value: String) {
-    ListItem(
-        overlineContent = { Text(label) },
-        headlineContent = { Text(value) },
-    )
+private fun Summary(chore: Chore, today: LocalDate, streak: Int?) {
+    val overdue = chore.status(today) is DueStatus.Overdue
+    Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                dueLabel(chore, today),
+                style = MaterialTheme.typography.titleLarge,
+                color = if (overdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+            )
+            InfoRow(Icons.Filled.Refresh, scheduleLabel(chore.schedule, chore.toleranceDays, today))
+            chore.areaName?.let { InfoRow(Icons.Filled.Place, it) }
+            InfoRow(
+                Icons.Filled.CheckCircle,
+                chore.lastDone?.let { stringResource(R.string.detail_last_done_on, it.formatLong()) }
+                    ?: stringResource(R.string.detail_never_done_long),
+            )
+            if (chore.notes.isNotBlank()) InfoRow(Icons.Filled.Info, chore.notes)
+            if (streak != null && streak >= 2) Text("🔥 " + stringResource(R.string.detail_chore_streak, streak))
+        }
+    }
+}
+
+@Composable
+private fun InfoRow(icon: ImageVector, text: String) {
+    Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text, style = MaterialTheme.typography.bodyLarge)
+    }
 }
 
 /** Postpone to tomorrow, in a week or to a chosen date (F4.4). */
