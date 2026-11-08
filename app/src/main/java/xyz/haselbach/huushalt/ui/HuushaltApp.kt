@@ -198,6 +198,7 @@ fun HuushaltApp(
                     onEndHoliday = { viewModel.endHoliday(it.id) },
                     onChangeHoliday = { open(Route.HOLIDAY) },
                     areas = allAreas,
+                    onEditChore = { open(Route.edit(it.id)) },
                     header = {
                         if (showPermissionCard) {
                             PermissionCard(
@@ -251,6 +252,8 @@ fun HuushaltApp(
                 checklist = checklist,
                 onToggleItem = { viewModel.setChecked(it.id, !it.checked) },
                 onPausedChange = { viewModel.setPaused(id, it) },
+                onCompleteOn = { date -> viewModel.complete(chore, date) },
+                onSkip = { viewModel.skip(id) },
             )
         }
 
@@ -281,6 +284,7 @@ fun HuushaltApp(
                         draft.areaId,
                         draft.checklist,
                         draft.newAreaName,
+                        draft.toleranceDays,
                     )
                     back()
                 },

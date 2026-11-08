@@ -4,6 +4,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -51,7 +53,7 @@ import xyz.haselbach.huushalt.ui.formatLong
 import xyz.haselbach.huushalt.ui.scheduleLabel
 
 /** Details of one chore with its history (F6.1, F6.2) and the actions done / postpone (F4). */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ChoreDetailScreen(
     chore: Chore,
@@ -69,8 +71,13 @@ fun ChoreDetailScreen(
     checklist: List<ChecklistItem> = emptyList(),
     onToggleItem: (ChecklistItem) -> Unit = {},
     onPausedChange: (Boolean) -> Unit = {},
+    /** Done on an earlier day (F4.3). */
+    onCompleteOn: (LocalDate) -> Unit = {},
+    /** Skip this occurrence (F4.5). */
+    onSkip: () -> Unit = {},
 ) {
     var showPostpone by rememberSaveable { mutableStateOf(false) }
+    var pickDoneDate by rememberSaveable { mutableStateOf(false) }
     var editingCompletionId by rememberSaveable { mutableStateOf<Long?>(null) }
 
     Scaffold(
@@ -95,7 +102,7 @@ fun ChoreDetailScreen(
             item(key = "facts") {
                 Column {
                     Fact(stringResource(R.string.detail_next_due), dueLabel(chore, today))
-                    Fact(stringResource(R.string.detail_schedule), scheduleLabel(chore.schedule))
+                    Fact(stringResource(R.string.detail_schedule), scheduleLabel(chore.schedule, chore.toleranceDays, today))
                     chore.areaName?.let { Fact(stringResource(R.string.area), it) }
                     Fact(
                         stringResource(R.string.detail_last_done),
@@ -153,8 +160,12 @@ fun ChoreDetailScreen(
                             Text(stringResource(R.string.action_postpone), modifier = Modifier.padding(start = 8.dp))
                         }
                     }
-                    TextButton(onClick = { onPausedChange(true) }, modifier = Modifier.padding(horizontal = 8.dp)) {
-                        Text(stringResource(R.string.action_pause))
+                    FlowRow(Modifier.padding(horizontal = 8.dp)) {
+                        TextButton(onClick = { pickDoneDate = true }) { Text(stringResource(R.string.action_done_earlier)) }
+                        if (chore.schedule.isRepeating) {
+                            TextButton(onClick = onSkip) { Text(stringResource(R.string.action_skip)) }
+                        }
+                        TextButton(onClick = { onPausedChange(true) }) { Text(stringResource(R.string.action_pause)) }
                     }
                 }
             }
@@ -192,6 +203,18 @@ fun ChoreDetailScreen(
             onDelete = {
                 editingCompletionId = null
                 onDeleteCompletion(completion.id)
+            },
+        )
+    }
+
+    if (pickDoneDate) {
+        LocalDatePickerDialog(
+            initial = today.minusDays(1),
+            latest = today,
+            onDismiss = { pickDoneDate = false },
+            onConfirm = {
+                pickDoneDate = false
+                onCompleteOn(it)
             },
         )
     }

@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.map
 import xyz.haselbach.huushalt.domain.Area
 import xyz.haselbach.huushalt.domain.ChecklistItem
 import xyz.haselbach.huushalt.domain.Chore
+import xyz.haselbach.huushalt.domain.DueStatus
 import xyz.haselbach.huushalt.domain.Holiday
 import xyz.haselbach.huushalt.domain.HolidayRules
 import xyz.haselbach.huushalt.domain.MissedPeriod
@@ -48,6 +49,8 @@ class ChoreRepository(
         areaId: Long? = null,
         /** Checklist in order; items with an id are kept (with their ticks), others are new (F1.7). */
         checklist: List<ChecklistDraft>? = null,
+        /** Days after the due date that still count as on time (F2.12). */
+        toleranceDays: Int = 0,
     ): Long {
         val normalized = normalize(schedule, nextDue)
         val entity = ChoreEntity(
@@ -59,6 +62,8 @@ class ChoreRepository(
             interval = normalized.interval,
             weekdays = normalized.weekdays.toBitmask(),
             dayOfMonth = normalized.dayOfMonth,
+            weekOfMonth = normalized.weekOfMonth,
+            toleranceDays = if (normalized.isRepeating) toleranceDays.coerceIn(0, MAX_TOLERANCE_DAYS) else 0,
             anchorDate = nextDue,
             dueDate = ScheduleCalculator.initialDueDate(normalized, nextDue),
             createdAt = now(),
@@ -73,6 +78,8 @@ class ChoreRepository(
                 id
             }
             if (checklist != null) saveChecklist(choreId, checklist)
+            dao.deleteDates(choreId)
+            dao.insertDates(normalized.dates.map { ChoreDateEntity(choreId = choreId, date = it) })
             choreId
         }
     }
@@ -121,7 +128,7 @@ class ChoreRepository(
     /** Marks a chore as done on [doneDate]. Returns the id of the new completion, for undo. */
     suspend fun complete(choreId: Long, doneDate: LocalDate): Long? = db.withTransaction {
         val chore = dao.getChore(choreId) ?: return@withTransaction null
-        val nextDue = ScheduleCalculator.dueDateAfterCompletion(chore.schedule(), chore.anchorDate, chore.dueDate, doneDate)
+        val nextDue = ScheduleCalculator.dueDateAfterCompletion(scheduleOf(chore), chore.anchorDate, chore.dueDate, doneDate)
         val completionId = dao.insertCompletion(
             CompletionEntity(choreId = choreId, doneDate = doneDate, previousDueDate = chore.dueDate, createdAt = now()),
         )
@@ -149,7 +156,7 @@ class ChoreRepository(
         dao.updateCompletionDate(completionId, doneDate)
         if (isLatest) {
             val nextDue = ScheduleCalculator.dueDateAfterCompletion(
-                chore.schedule(),
+                scheduleOf(chore),
                 chore.anchorDate,
                 completion.previousDueDate,
                 doneDate,
@@ -182,16 +189,18 @@ class ChoreRepository(
     /** "Neu planen ab heute" (F10.6): moves all overdue chores without marking them done. */
     suspend fun rescheduleOverdue(today: LocalDate = LocalDate.now()) = db.withTransaction {
         dao.getChores().map { it.toDomain() to it.chore }
-            .filter { (chore, _) -> !chore.paused && chore.dueDate != null && chore.dueDate < today }
+            .filter { (chore, _) -> chore.status(today) is DueStatus.Overdue }
             .forEach { (chore, entity) ->
                 recordMissed(entity, today)
                 dao.updateDueDate(chore.id, HolidayRules.dueDateWhenRescheduled(chore, today))
             }
     }
 
+    /** Remembers the overdue days of a chore that is moved without being done (F7.2). */
     private suspend fun recordMissed(chore: ChoreEntity, today: LocalDate) {
-        val due = chore.dueDate ?: return
-        if (due < today) dao.insertMissedPeriod(MissedPeriodEntity(choreId = chore.id, fromDate = due, untilDate = today))
+        // Overdue starts on the last day of the tolerance window (F2.12).
+        val from = chore.dueDate?.plusDays(chore.toleranceDays.toLong()) ?: return
+        if (from < today) dao.insertMissedPeriod(MissedPeriodEntity(choreId = chore.id, fromDate = from, untilDate = today))
     }
 
     /** Plans a holiday (id null) or changes one (F10.1, F10.4). */
@@ -243,12 +252,37 @@ class ChoreRepository(
     /** Drops fields that don't apply to the schedule, so stored data stays consistent. */
     private fun normalize(schedule: Schedule, anchor: LocalDate): Schedule = when {
         !schedule.isRepeating -> Schedule.ONCE
-        schedule.mode == ScheduleMode.FLEXIBLE -> schedule.copy(weekdays = emptySet(), dayOfMonth = null)
-        schedule.unit == RepeatUnit.WEEKS -> schedule.copy(dayOfMonth = null)
-        schedule.unit == RepeatUnit.MONTHS -> schedule.copy(weekdays = emptySet(), dayOfMonth = anchor.dayOfMonth)
-        else -> schedule.copy(weekdays = emptySet(), dayOfMonth = null)
+        schedule.unit == RepeatUnit.DATES -> Schedule(ScheduleMode.FIXED, RepeatUnit.DATES, dates = schedule.dates.distinct().sorted())
+        schedule.mode == ScheduleMode.FLEXIBLE -> Schedule(ScheduleMode.FLEXIBLE, schedule.unit, schedule.interval)
+        schedule.unit == RepeatUnit.WEEKS -> schedule.copy(dayOfMonth = null, weekOfMonth = null, dates = emptyList())
+        schedule.unit == RepeatUnit.MONTHS && schedule.weekOfMonth != null ->
+            schedule.copy(dayOfMonth = null, dates = emptyList())
+        schedule.unit == RepeatUnit.MONTHS ->
+            schedule.copy(weekdays = emptySet(), dayOfMonth = anchor.dayOfMonth, weekOfMonth = null, dates = emptyList())
+        else -> Schedule(ScheduleMode.FIXED, schedule.unit, schedule.interval)
+    }
+
+    /** The full schedule of a stored chore, including its date list (F2.11). */
+    private suspend fun scheduleOf(chore: ChoreEntity): Schedule =
+        chore.schedule(if (chore.unit == RepeatUnit.DATES) dao.getDates(chore.id) else emptyList())
+
+    /**
+     * Skips the current occurrence without counting it as done (F4.5): the chore moves on as if it
+     * had been done on its due date (or today, if that is later). Skipping an overdue chore keeps
+     * its overdue days for the streak.
+     */
+    suspend fun skip(choreId: Long, today: LocalDate = LocalDate.now()) = db.withTransaction {
+        val chore = dao.getChore(choreId) ?: return@withTransaction
+        val due = chore.dueDate ?: return@withTransaction
+        val schedule = scheduleOf(chore)
+        if (!schedule.isRepeating) return@withTransaction
+        recordMissed(chore, today)
+        dao.updateDueDate(choreId, ScheduleCalculator.dueDateAfterCompletion(schedule, chore.anchorDate, due, maxOf(due, today)))
     }
 }
 
 /** A checklist item as edited in the editor: [id] null for new items. */
 data class ChecklistDraft(val id: Long?, val text: String)
+
+/** The tolerance window can be at most a week (F2.12). */
+const val MAX_TOLERANCE_DAYS = 7

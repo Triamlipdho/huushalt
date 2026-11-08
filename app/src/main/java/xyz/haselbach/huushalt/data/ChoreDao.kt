@@ -75,6 +75,17 @@ interface ChoreDao {
     @Query("UPDATE chores SET paused = :paused WHERE id = :id")
     suspend fun updatePaused(id: Long, paused: Boolean)
 
+    // Date lists (F2.11)
+
+    @Query("SELECT date FROM chore_dates WHERE choreId = :choreId ORDER BY date")
+    suspend fun getDates(choreId: Long): List<LocalDate>
+
+    @Query("DELETE FROM chore_dates WHERE choreId = :choreId")
+    suspend fun deleteDates(choreId: Long)
+
+    @Insert(onConflict = androidx.room.OnConflictStrategy.IGNORE)
+    suspend fun insertDates(dates: List<ChoreDateEntity>)
+
     // Areas (F1.4)
 
     @Query("SELECT * FROM areas ORDER BY name COLLATE NOCASE")
@@ -118,7 +129,8 @@ interface ChoreDao {
             (SELECT MAX(doneDate) FROM completions WHERE completions.choreId = chores.id) AS lastDone,
             areas.name AS areaName,
             (SELECT COUNT(*) FROM checklist_items WHERE checklist_items.choreId = chores.id) AS checklistTotal,
-            (SELECT COUNT(*) FROM checklist_items WHERE checklist_items.choreId = chores.id AND checked = 1) AS checklistDone
+            (SELECT COUNT(*) FROM checklist_items WHERE checklist_items.choreId = chores.id AND checked = 1) AS checklistDone,
+            (SELECT GROUP_CONCAT(date) FROM chore_dates WHERE chore_dates.choreId = chores.id) AS dateList
         """
     }
 }

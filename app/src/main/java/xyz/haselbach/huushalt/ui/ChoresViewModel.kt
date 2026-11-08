@@ -31,6 +31,7 @@ import xyz.haselbach.huushalt.domain.Chore
 import xyz.haselbach.huushalt.domain.DueStatus
 import xyz.haselbach.huushalt.domain.Holiday
 import xyz.haselbach.huushalt.domain.Progress
+import xyz.haselbach.huushalt.domain.RepeatUnit
 import xyz.haselbach.huushalt.domain.Stats
 import xyz.haselbach.huushalt.domain.Streaks
 import xyz.haselbach.huushalt.reminders.OpenChores
@@ -48,6 +49,8 @@ data class HomeState(
     val activeHoliday: Holiday? = null,
     /** Next planned holiday, if any. */
     val plannedHoliday: Holiday? = null,
+    /** Chores with a date list that has at most one date left (F2.11). */
+    val datesRunningOut: List<Chore> = emptyList(),
 ) {
     val open: Int get() = overdue.size + dueToday.size
     val total: Int get() = doneToday + open
@@ -90,11 +93,14 @@ class ChoresViewModel(private val repository: ChoreRepository) : ViewModel() {
             today = today,
             hasChores = chores.isNotEmpty(),
             overdue = matching { it is DueStatus.Overdue },
-            dueToday = matching { it is DueStatus.Today },
+            dueToday = matching { it == DueStatus.Today || it is DueStatus.InWindow },
             upcoming = matching { it is DueStatus.Upcoming },
             doneToday = done.size,
             activeHoliday = holidays.firstOrNull { it.isActive(today) },
             plannedHoliday = holidays.firstOrNull { it.isPlanned(today) },
+            datesRunningOut = chores.filter { chore ->
+                chore.schedule.unit == RepeatUnit.DATES && !chore.paused && chore.schedule.dates.count { it >= today } <= 1
+            },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
@@ -107,7 +113,8 @@ class ChoresViewModel(private val repository: ChoreRepository) : ViewModel() {
             repository.holidays,
             repository.missedPeriods,
         ) { chores, completions, today, holidays, missed ->
-            val records = completions.map { it.completion.toRecord() }
+            val tolerance = chores.associate { it.id to it.toleranceDays }
+            val records = completions.map { it.completion.toRecord(tolerance[it.completion.choreId] ?: 0) }
             val start = chores.minOfOrNull { it.createdDate }
             val streaks = if (start == null) {
                 Streaks(0, 0)
@@ -115,7 +122,7 @@ class ChoresViewModel(private val repository: ChoreRepository) : ViewModel() {
                 Progress.streaks(
                     overdueDays = Progress.overdueDays(
                         records,
-                        chores.filterNot { it.paused }.mapNotNull { it.dueDate },
+                        chores.filterNot { it.paused }.mapNotNull { chore -> chore.dueDate?.plusDays(chore.toleranceDays.toLong()) },
                         start,
                         today,
                         missed,
@@ -189,14 +196,20 @@ class ChoresViewModel(private val repository: ChoreRepository) : ViewModel() {
         viewModelScope.launch { repository.deleteArea(id) }
     }
 
-    fun complete(chore: Chore) {
+    /** Marks a chore as done today, or on an earlier [date] ("Früher erledigt", F4.3). */
+    fun complete(chore: Chore, date: LocalDate = LocalDate.now()) {
         viewModelScope.launch {
             val today = LocalDate.now()
-            val wasOpen = chore.status(today).let { it is DueStatus.Overdue || it == DueStatus.Today }
-            val completionId = repository.complete(chore.id, today) ?: return@launch
+            val wasOpen = chore.status(today) is DueStatus.Overdue || chore.isDueNow(today)
+            val completionId = repository.complete(chore.id, date) ?: return@launch
             val allDone = wasOpen && OpenChores.of(repository.chores.first(), today).isEmpty
             events.send(UiEvent.Completed(chore.name, completionId, allDone))
         }
+    }
+
+    /** Skips the current occurrence (F4.5). */
+    fun skip(choreId: Long) {
+        viewModelScope.launch { repository.skip(choreId) }
     }
 
     fun changeCompletionDate(completionId: Long, date: LocalDate) {
@@ -224,10 +237,11 @@ class ChoresViewModel(private val repository: ChoreRepository) : ViewModel() {
         areaId: Long?,
         checklist: List<ChecklistDraft>,
         newAreaName: String? = null,
+        toleranceDays: Int = 0,
     ) {
         viewModelScope.launch {
             val area = if (!newAreaName.isNullOrBlank()) repository.addArea(newAreaName) else areaId
-            repository.save(id, name, notes, schedule, nextDue, area, checklist)
+            repository.save(id, name, notes, schedule, nextDue, area, checklist, toleranceDays)
         }
     }
 

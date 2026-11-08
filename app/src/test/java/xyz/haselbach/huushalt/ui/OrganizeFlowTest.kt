@@ -117,4 +117,26 @@ class OrganizeFlowTest {
         compose.onNodeWithText("Löschen").performClick()
         waitFor("Noch keine Räume", substring = true)
     }
+
+    @Test
+    fun dateListFromPastedText() {
+        waitFor("Noch keine Aufgaben")
+        compose.onNodeWithContentDescription("Neue Aufgabe").performClick()
+        compose.onNodeWithText("Name").performTextInput("Papier")
+        compose.onNodeWithText("Nach festem Plan").performClick()
+        compose.onNodeWithText("Daten").performClick()
+        val year = java.time.LocalDate.now().year + 1
+        compose.onNodeWithText("Mehrere Daten einfügen").performScrollTo().performTextInput("Di 12.01.$year, Di 26.01.$year")
+        compose.onNodeWithText("2 Daten übernehmen").performScrollTo().performClick()
+        waitFor("12.01.$year", substring = true)
+        compose.screenshot("13-date-list")
+        compose.onNodeWithText("Speichern").performClick()
+
+        // The dates are next year, so the chore isn't on Heute yet.
+        waitFor("Alles erledigt für heute")
+        compose.onNodeWithText("Alle Aufgaben").performClick()
+        waitFor("Papier")
+        compose.onNodeWithText("Papier").performClick()
+        waitFor("An bestimmten Daten (noch 2)")
+    }
 }

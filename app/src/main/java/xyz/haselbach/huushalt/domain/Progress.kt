@@ -5,9 +5,19 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.temporal.TemporalAdjusters
 
-/** One completion: when it was done and the due date it fulfilled (null for unknown). */
-data class CompletionRecord(val choreId: Long, val doneDate: LocalDate, val dueDate: LocalDate?) {
-    val onTime: Boolean get() = dueDate == null || doneDate <= dueDate
+/**
+ * One completion: when it was done and the due date it fulfilled (null for unknown).
+ * [toleranceDays] after the due date still count as on time (F2.12).
+ */
+data class CompletionRecord(
+    val choreId: Long,
+    val doneDate: LocalDate,
+    val dueDate: LocalDate?,
+    val toleranceDays: Int = 0,
+) {
+    /** Last day that still counts as on time. */
+    val lastOnTimeDay: LocalDate? get() = dueDate?.plusDays(toleranceDays.toLong())
+    val onTime: Boolean get() = lastOnTimeDay.let { it == null || doneDate <= it }
 }
 
 data class Streaks(val current: Int, val best: Int)
@@ -25,7 +35,8 @@ object Progress {
      * Days before [today] on which at least one chore was overdue at the end of the day (F7.2):
      * a chore due on day p and done on day d > p was overdue from p to d - 1; a chore that is
      * overdue now has been since its due date. Postponing before the due date leaves no overdue
-     * days, so it doesn't break a streak (F7.6).
+     * days, so it doesn't break a streak (F7.6). With a tolerance window, overdue starts on its last
+     * day (F2.12). [currentDueDates] are the days chores became overdue, tolerance included.
      */
     fun overdueDays(
         completions: List<CompletionRecord>,
@@ -44,7 +55,7 @@ object Progress {
                 day = day.plusDays(1)
             }
         }
-        completions.forEach { c -> c.dueDate?.let { due -> if (c.doneDate > due) addRange(due, c.doneDate) } }
+        completions.forEach { c -> c.lastOnTimeDay?.let { last -> if (c.doneDate > last) addRange(last, c.doneDate) } }
         currentDueDates.forEach { due -> addRange(due, today) }
         missedPeriods.forEach { addRange(it.from, it.until) }
         return days

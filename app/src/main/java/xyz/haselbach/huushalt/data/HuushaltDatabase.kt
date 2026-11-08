@@ -15,14 +15,17 @@ import androidx.room.TypeConverters
         MissedPeriodEntity::class,
         AreaEntity::class,
         ChecklistItemEntity::class,
+        ChoreDateEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
     autoMigrations = [
         // 2: holidays and missed periods (F10)
         AutoMigration(from = 1, to = 2),
         // 3: rooms, paused chores, checklists (F1.3, F1.4, F1.7)
         AutoMigration(from = 2, to = 3),
+        // 4: nth weekday, tolerance window, date lists (F2.10 to F2.12)
+        AutoMigration(from = 3, to = 4),
     ],
 )
 @TypeConverters(Converters::class)

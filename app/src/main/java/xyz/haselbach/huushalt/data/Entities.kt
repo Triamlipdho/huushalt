@@ -49,6 +49,29 @@ data class ChoreEntity(
     @ColumnInfo(defaultValue = "NULL") val areaId: Long? = null,
     /** Paused chores are not due and don't count for streaks (F1.3). */
     @ColumnInfo(defaultValue = "0") val paused: Boolean = false,
+    /** Nth weekday of the month, see [Schedule.weekOfMonth] (F2.10). */
+    @ColumnInfo(defaultValue = "NULL") val weekOfMonth: Int? = null,
+    /** Days after the due date that still count as on time (F2.12). */
+    @ColumnInfo(defaultValue = "0") val toleranceDays: Int = 0,
+)
+
+/** One date of a chore with a list of dates (F2.11). */
+@Entity(
+    tableName = "chore_dates",
+    foreignKeys = [
+        ForeignKey(
+            entity = ChoreEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["choreId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index(value = ["choreId", "date"], unique = true)],
+)
+data class ChoreDateEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val choreId: Long,
+    val date: LocalDate,
 )
 
 /** A room or area such as Küche or Bad (F1.4). */
@@ -144,13 +167,15 @@ data class ChoreWithLastDone(
     @ColumnInfo(name = "areaName") val areaName: String? = null,
     @ColumnInfo(name = "checklistTotal") val checklistTotal: Int = 0,
     @ColumnInfo(name = "checklistDone") val checklistDone: Int = 0,
+    /** Dates of a date list, comma separated epoch days (F2.11). */
+    @ColumnInfo(name = "dateList") val dateList: String? = null,
 )
 
 fun ChoreWithLastDone.toDomain() = Chore(
     id = chore.id,
     name = chore.name,
     notes = chore.notes,
-    schedule = chore.schedule(),
+    schedule = chore.schedule(dates()),
     anchorDate = chore.anchorDate,
     dueDate = chore.dueDate,
     lastDone = lastDone,
@@ -160,7 +185,11 @@ fun ChoreWithLastDone.toDomain() = Chore(
     paused = chore.paused,
     checklistTotal = checklistTotal,
     checklistDone = checklistDone,
+    toleranceDays = chore.toleranceDays,
 )
+
+fun ChoreWithLastDone.dates(): List<LocalDate> =
+    dateList?.split(',')?.filter { it.isNotBlank() }?.map { LocalDate.ofEpochDay(it.trim().toLong()) }?.sorted().orEmpty()
 
 fun AreaEntity.toDomain() = Area(id, name)
 
@@ -172,14 +201,16 @@ data class CompletionWithName(
     @ColumnInfo(name = "choreName") val choreName: String,
 )
 
-fun CompletionEntity.toRecord() = CompletionRecord(choreId, doneDate, previousDueDate)
+fun CompletionEntity.toRecord(toleranceDays: Int = 0) = CompletionRecord(choreId, doneDate, previousDueDate, toleranceDays)
 
-fun ChoreEntity.schedule() = Schedule(
+fun ChoreEntity.schedule(dates: List<LocalDate> = emptyList()) = Schedule(
     mode = mode,
     unit = unit,
     interval = interval,
     weekdays = DayOfWeek.entries.filter { weekdays and (1 shl (it.value - 1)) != 0 }.toSet(),
     dayOfMonth = dayOfMonth,
+    weekOfMonth = weekOfMonth,
+    dates = dates,
 )
 
 fun Set<DayOfWeek>.toBitmask(): Int = fold(0) { mask, day -> mask or (1 shl (day.value - 1)) }

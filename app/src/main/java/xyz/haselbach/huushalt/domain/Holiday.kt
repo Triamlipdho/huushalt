@@ -52,7 +52,7 @@ object HolidayRules {
      * from today, fixed chores jump to their next regular date (today or later), one-off chores
      * are due today.
      */
-    fun dueDateWhenRescheduled(chore: Chore, today: LocalDate): LocalDate {
+    fun dueDateWhenRescheduled(chore: Chore, today: LocalDate): LocalDate? {
         val schedule = chore.schedule
         return when {
             !schedule.isRepeating -> today
