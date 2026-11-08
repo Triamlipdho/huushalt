@@ -26,6 +26,7 @@ import xyz.haselbach.huushalt.data.CompletionWithName
 import xyz.haselbach.huushalt.data.toRecord
 import xyz.haselbach.huushalt.domain.Chore
 import xyz.haselbach.huushalt.domain.DueStatus
+import xyz.haselbach.huushalt.domain.Holiday
 import xyz.haselbach.huushalt.domain.Progress
 import xyz.haselbach.huushalt.domain.Stats
 import xyz.haselbach.huushalt.domain.Streaks
@@ -40,6 +41,10 @@ data class HomeState(
     val upcoming: List<Chore>,
     /** Chores done today, for the progress "x von y erledigt" (F7.1). */
     val doneToday: Int,
+    /** Holiday mode right now (F10.1). */
+    val activeHoliday: Holiday? = null,
+    /** Next planned holiday, if any. */
+    val plannedHoliday: Holiday? = null,
 ) {
     val open: Int get() = overdue.size + dueToday.size
     val total: Int get() = doneToday + open
@@ -73,7 +78,7 @@ class ChoresViewModel(private val repository: ChoreRepository) : ViewModel() {
     private val doneToday: Flow<Set<Long>> = _today.flatMapLatest { repository.choreIdsDoneOn(it) }
 
     /** Home screen state; null while loading. */
-    val home: StateFlow<HomeState?> = combine(repository.chores, doneToday, _today) { chores, done, today ->
+    val home: StateFlow<HomeState?> = combine(repository.chores, doneToday, _today, repository.holidays) { chores, done, today, holidays ->
         val order = compareBy<Chore> { it.dueDate }.thenBy { it.name.lowercase() }
         val statuses = chores.associateWith { it.status(today) }
         fun matching(predicate: (DueStatus) -> Boolean) =
@@ -85,22 +90,31 @@ class ChoresViewModel(private val repository: ChoreRepository) : ViewModel() {
             dueToday = matching { it is DueStatus.Today },
             upcoming = matching { it is DueStatus.Upcoming },
             doneToday = done.size,
+            activeHoliday = holidays.firstOrNull { it.isActive(today) },
+            plannedHoliday = holidays.firstOrNull { it.isPlanned(today) },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Null while loading. */
     val progress: StateFlow<ProgressState?> =
-        combine(repository.chores, repository.allCompletions, _today) { chores, completions, today ->
+        combine(
+            repository.chores,
+            repository.allCompletions,
+            _today,
+            repository.holidays,
+            repository.missedPeriods,
+        ) { chores, completions, today, holidays, missed ->
             val records = completions.map { it.completion.toRecord() }
             val start = chores.minOfOrNull { it.createdDate }
             val streaks = if (start == null) {
                 Streaks(0, 0)
             } else {
                 Progress.streaks(
-                    overdueDays = Progress.overdueDays(records, chores.mapNotNull { it.dueDate }, start, today),
+                    overdueDays = Progress.overdueDays(records, chores.mapNotNull { it.dueDate }, start, today, missed),
                     start = start,
                     today = today,
                     todayClean = OpenChores.of(chores, today).isEmpty,
+                    holidayDays = holidays.flatMap { it.daysUntil(today).toList() }.toSet(),
                 )
             }
             val byChore = records.groupBy { it.choreId }
@@ -120,6 +134,24 @@ class ChoresViewModel(private val repository: ChoreRepository) : ViewModel() {
     /** Called when the app comes to the foreground, so "today" is right after midnight. */
     fun refreshToday() {
         _today.value = LocalDate.now()
+        viewModelScope.launch { repository.applyFinishedHolidays(LocalDate.now()) }
+    }
+
+    /** "Neu planen ab heute" (F10.6). */
+    fun rescheduleOverdue() {
+        viewModelScope.launch { repository.rescheduleOverdue() }
+    }
+
+    fun saveHoliday(id: Long?, start: LocalDate, end: LocalDate) {
+        viewModelScope.launch { repository.saveHoliday(id, start, end) }
+    }
+
+    fun endHoliday(id: Long) {
+        viewModelScope.launch { repository.endHoliday(id) }
+    }
+
+    fun deleteHoliday(id: Long) {
+        viewModelScope.launch { repository.deleteHoliday(id) }
     }
 
     fun completions(choreId: Long): Flow<List<CompletionEntity>> = repository.completions(choreId)

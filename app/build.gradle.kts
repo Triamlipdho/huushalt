@@ -74,6 +74,12 @@ android {
         unitTests.isIncludeAndroidResources = true
     }
 
+    sourceSets {
+        // Exported Room schemas for the migration tests. Robolectric reads the app's assets, so they
+        // go into the debug build only; release APKs don't contain them.
+        getByName("debug").assets.srcDir("$projectDir/schemas")
+    }
+
     dependenciesInfo {
         // The dependency metadata block is only meant for Google Play; keep the APK clean.
         includeInApk = false
@@ -112,6 +118,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.room.testing)
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui.test.junit4)
 }

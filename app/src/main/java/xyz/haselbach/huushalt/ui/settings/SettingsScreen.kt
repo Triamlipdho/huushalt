@@ -35,9 +35,11 @@ import androidx.compose.ui.unit.dp
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import xyz.haselbach.huushalt.R
+import xyz.haselbach.huushalt.domain.Holiday
 import xyz.haselbach.huushalt.settings.AppSettings
 import xyz.haselbach.huushalt.settings.ReminderSettings
 import xyz.haselbach.huushalt.ui.components.SectionHeader
+import xyz.haselbach.huushalt.ui.formatShort
 
 private val timeFormat = DateTimeFormatter.ofPattern("HH:mm")
 
@@ -52,6 +54,9 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onChange: ((ReminderSettings) -> ReminderSettings) -> Unit,
     onMotivationChange: (Boolean) -> Unit,
+    /** Current or next holiday, shown in the "Ferien" section (F10.1). */
+    holiday: Holiday?,
+    onOpenHoliday: () -> Unit,
 ) {
     val reminders = settings.reminders
     var editing by rememberSaveable { mutableStateOf<TimeField?>(null) }
@@ -117,6 +122,21 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(16.dp),
+            )
+            HorizontalDivider()
+            SectionHeader(stringResource(R.string.holiday_title))
+            ListItem(
+                modifier = Modifier.clickable(onClick = onOpenHoliday),
+                headlineContent = { Text(stringResource(R.string.holiday_mode)) },
+                supportingContent = {
+                    Text(
+                        if (holiday == null) {
+                            stringResource(R.string.holiday_none)
+                        } else {
+                            stringResource(R.string.holiday_period, holiday.start.formatShort(), holiday.end.formatShort())
+                        },
+                    )
+                },
             )
             HorizontalDivider()
             SectionHeader(stringResource(R.string.settings_motivation))

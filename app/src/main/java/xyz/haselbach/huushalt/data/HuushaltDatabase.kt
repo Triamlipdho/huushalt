@@ -1,18 +1,31 @@
 package xyz.haselbach.huushalt.data
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-@Database(entities = [ChoreEntity::class, CompletionEntity::class], version = 1, exportSchema = true)
+@Database(
+    entities = [ChoreEntity::class, CompletionEntity::class, HolidayEntity::class, MissedPeriodEntity::class],
+    version = 2,
+    exportSchema = true,
+    autoMigrations = [
+        // 2: holidays and missed periods (F10)
+        AutoMigration(from = 1, to = 2),
+    ],
+)
 @TypeConverters(Converters::class)
 abstract class HuushaltDatabase : RoomDatabase() {
     abstract fun choreDao(): ChoreDao
 
+    abstract fun holidayDao(): HolidayDao
+
     companion object {
+        const val NAME = "huushalt.db"
+
         fun create(context: Context): HuushaltDatabase =
-            Room.databaseBuilder(context, HuushaltDatabase::class.java, "huushalt.db").build()
+            Room.databaseBuilder(context, HuushaltDatabase::class.java, NAME).build()
     }
 }
