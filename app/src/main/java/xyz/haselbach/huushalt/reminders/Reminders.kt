@@ -14,9 +14,15 @@ class Reminders(
     private val notifier: ReminderNotifier,
 ) {
     suspend fun onAlarm(kind: ReminderKind, now: ZonedDateTime = ZonedDateTime.now()) {
+        val today = now.toLocalDate()
+        // The first reminder after a holiday must already see the moved chores (F10.2).
+        chores.applyFinishedHolidays(today)
         val reminderSettings = settings.current().reminders
+        val onHoliday = chores.holidays.first().any { it.isActive(today) }
         val enabled = reminderSettings.enabled && (kind == ReminderKind.MORNING || reminderSettings.eveningEnabled)
-        if (enabled) {
+        if (onHoliday) {
+            notifier.cancel() // No reminders during holidays (F10.1).
+        } else if (enabled) {
             val open = OpenChores.of(chores.chores.first(), now.toLocalDate())
             if (open.isEmpty) notifier.cancel() else notifier.show(kind, open)
         }

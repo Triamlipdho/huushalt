@@ -44,6 +44,7 @@ import xyz.haselbach.huushalt.ui.chores.AllChoresScreen
 import xyz.haselbach.huushalt.ui.detail.ChoreDetailScreen
 import xyz.haselbach.huushalt.ui.edit.ChoreEditScreen
 import xyz.haselbach.huushalt.ui.components.PermissionCard
+import xyz.haselbach.huushalt.ui.holiday.HolidayScreen
 import xyz.haselbach.huushalt.ui.home.HomeScreen
 import xyz.haselbach.huushalt.ui.progress.ProgressScreen
 import xyz.haselbach.huushalt.ui.settings.SettingsScreen
@@ -56,6 +57,7 @@ private object Route {
     const val ALL = "all"
     const val PROGRESS = "progress"
     const val SETTINGS = "settings"
+    const val HOLIDAY = "holiday"
     val tabs = setOf(TODAY, ALL, PROGRESS)
     fun detail(id: Long) = "detail:$id"
     fun edit(id: Long?) = "edit:${id ?: "new"}"
@@ -162,6 +164,9 @@ fun HuushaltApp(
                     onOpen = { open(Route.detail(it.id)) },
                     onComplete = viewModel::complete,
                     streak = progressState.streaks.current.takeIf { appSettings.motivationEnabled },
+                    onReschedule = viewModel::rescheduleOverdue,
+                    onEndHoliday = { viewModel.endHoliday(it.id) },
+                    onChangeHoliday = { open(Route.HOLIDAY) },
                     header = {
                         if (showPermissionCard) {
                             PermissionCard(
@@ -242,7 +247,30 @@ fun HuushaltApp(
             onBack = ::back,
             onChange = { change -> settingsViewModel.update { it.copy(reminders = change(it.reminders)) } },
             onMotivationChange = { on -> settingsViewModel.update { it.copy(motivationEnabled = on) } },
+            holiday = homeState.activeHoliday ?: homeState.plannedHoliday,
+            onOpenHoliday = { open(Route.HOLIDAY) },
         )
+
+        route == Route.HOLIDAY -> {
+            val holiday = homeState.activeHoliday ?: homeState.plannedHoliday
+            HolidayScreen(
+                holiday = holiday,
+                today = today,
+                onClose = ::back,
+                onSave = { start, end ->
+                    viewModel.saveHoliday(holiday?.id, start, end)
+                    back()
+                },
+                onEnd = {
+                    holiday?.let { viewModel.endHoliday(it.id) }
+                    back()
+                },
+                onDelete = {
+                    holiday?.let { viewModel.deleteHoliday(it.id) }
+                    back()
+                },
+            )
+        }
 
         else -> LaunchedEffect(route) { backToTab() }
     }

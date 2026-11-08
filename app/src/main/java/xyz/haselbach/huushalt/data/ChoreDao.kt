@@ -62,4 +62,13 @@ interface ChoreDao {
 
     @Query("DELETE FROM completions WHERE id = :id")
     suspend fun deleteCompletion(id: Long)
+
+    @Query("SELECT * FROM missed_periods")
+    fun observeMissedPeriods(): Flow<List<MissedPeriodEntity>>
+
+    @Insert
+    suspend fun insertMissedPeriod(period: MissedPeriodEntity)
+
+    @Query("SELECT chores.*, (SELECT MAX(doneDate) FROM completions WHERE completions.choreId = chores.id) AS lastDone FROM chores")
+    suspend fun getChores(): List<ChoreWithLastDone>
 }

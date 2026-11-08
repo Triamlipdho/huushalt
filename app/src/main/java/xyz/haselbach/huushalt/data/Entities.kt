@@ -12,6 +12,8 @@ import java.time.ZoneId
 import java.time.LocalDate
 import xyz.haselbach.huushalt.domain.Chore
 import xyz.haselbach.huushalt.domain.CompletionRecord
+import xyz.haselbach.huushalt.domain.Holiday
+import xyz.haselbach.huushalt.domain.MissedPeriod
 import xyz.haselbach.huushalt.domain.RepeatUnit
 import xyz.haselbach.huushalt.domain.Schedule
 import xyz.haselbach.huushalt.domain.ScheduleMode
@@ -52,6 +54,44 @@ data class CompletionEntity(
     val previousDueDate: LocalDate?,
     val createdAt: Long,
 )
+
+/** Holiday mode (F10.1). */
+@Entity(tableName = "holidays")
+data class HolidayEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val startDate: LocalDate,
+    val endDate: LocalDate,
+    /** Chores were moved after the holiday (F10.2). */
+    val applied: Boolean,
+    val createdAt: Long,
+)
+
+/**
+ * A chore was overdue from [fromDate] until the day before [untilDate] and then moved without
+ * being done (postponed or rescheduled), so streaks still know about it (F7.2).
+ */
+@Entity(
+    tableName = "missed_periods",
+    foreignKeys = [
+        ForeignKey(
+            entity = ChoreEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["choreId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index("choreId")],
+)
+data class MissedPeriodEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val choreId: Long,
+    val fromDate: LocalDate,
+    val untilDate: LocalDate,
+)
+
+fun HolidayEntity.toDomain() = Holiday(id, startDate, endDate, applied)
+
+fun MissedPeriodEntity.toDomain() = MissedPeriod(choreId, fromDate, untilDate)
 
 data class ChoreWithLastDone(
     @Embedded val chore: ChoreEntity,

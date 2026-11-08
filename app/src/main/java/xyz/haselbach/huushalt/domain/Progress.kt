@@ -12,6 +12,9 @@ data class CompletionRecord(val choreId: Long, val doneDate: LocalDate, val dueD
 
 data class Streaks(val current: Int, val best: Int)
 
+/** A chore was overdue from [from] until the day before [until] without being done. */
+data class MissedPeriod(val choreId: Long, val from: LocalDate, val until: LocalDate)
+
 /**
  * Motivation figures, all calculated from the history so they stay right when past completions
  * are edited or deleted (F6.4).
@@ -29,6 +32,8 @@ object Progress {
         currentDueDates: List<LocalDate>,
         start: LocalDate,
         today: LocalDate,
+        /** Overdue periods that ended without a completion, e.g. postponed while overdue (F4.4, F10.6). */
+        missedPeriods: List<MissedPeriod> = emptyList(),
     ): Set<LocalDate> {
         val days = HashSet<LocalDate>()
         fun addRange(from: LocalDate, toExclusive: LocalDate) {
@@ -41,6 +46,7 @@ object Progress {
         }
         completions.forEach { c -> c.dueDate?.let { due -> if (c.doneDate > due) addRange(due, c.doneDate) } }
         currentDueDates.forEach { due -> addRange(due, today) }
+        missedPeriods.forEach { addRange(it.from, it.until) }
         return days
     }
 
@@ -49,6 +55,7 @@ object Progress {
      * from [start] (the day the first chore was created). Today only counts once nothing is open
      * ([todayClean]); until then the streak ending yesterday is still alive. With
      * [freeDayPerWeek], one overdue day per week (Monday to Sunday) doesn't break it (F7.6).
+     * [holidayDays] are neutral: they neither count nor break the streak (F10.3).
      */
     fun streaks(
         overdueDays: Set<LocalDate>,
@@ -56,6 +63,7 @@ object Progress {
         today: LocalDate,
         todayClean: Boolean,
         freeDayPerWeek: Boolean = true,
+        holidayDays: Set<LocalDate> = emptySet(),
     ): Streaks {
         val last = if (todayClean) today else today.minusDays(1)
         var run = 0
@@ -63,6 +71,10 @@ object Progress {
         val freeDaysUsed = HashSet<LocalDate>()
         var day = start
         while (day <= last) {
+            if (day in holidayDays) {
+                day = day.plusDays(1)
+                continue
+            }
             if (day in overdueDays) {
                 val week = day.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
                 if (freeDayPerWeek && freeDaysUsed.add(week)) {

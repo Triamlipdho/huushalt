@@ -104,4 +104,14 @@ class RemindersTest {
         assertTrue(notifications().isEmpty())
         assertEquals(1, shadowOf(app.getSystemService(AlarmManager::class.java)).scheduledAlarms.size)
     }
+
+    @Test
+    fun `no reminders during holidays (F10_1)`() = runBlocking {
+        app.repository.save(null, "Staubsaugen", "", weekly, today)
+        app.repository.saveHoliday(null, today, today.plusDays(3), today)
+
+        app.reminders.onAlarm(ReminderKind.MORNING)
+
+        assertTrue(notifications().isEmpty())
+    }
 }

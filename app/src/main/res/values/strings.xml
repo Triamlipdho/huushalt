@@ -192,4 +192,25 @@
     <string name="settings_motivation">Motivation</string>
     <string name="settings_motivation_switch">Serien und Feiern</string>
     <string name="settings_motivation_summary">Zeigt, wie viele Tage in Folge alles erledigt war, und feiert erledigte Tage.</string>
+
+    <!-- Holidays (F10.1 to F10.4) -->
+    <string name="holiday_title">Ferien</string>
+    <string name="holiday_mode">Ferienmodus</string>
+    <string name="holiday_none">Keine Ferien geplant</string>
+    <string name="holiday_period">%1$s – %2$s</string>
+    <string name="holiday_active_title">Ferien bis %s</string>
+    <string name="holiday_active_body">Keine Erinnerungen, deine Serien pausieren. Nach den Ferien werden die Aufgaben automatisch verschoben.</string>
+    <string name="holiday_planned">Ferien geplant: %s</string>
+    <string name="holiday_end">Ferien beenden</string>
+    <string name="holiday_change">Ändern</string>
+    <string name="holiday_delete">Ferien löschen</string>
+    <string name="holiday_from">Von</string>
+    <string name="holiday_until">Bis und mit</string>
+    <string name="holiday_explanation">Während der Ferien gibt es keine Erinnerungen und deine Serien pausieren. Danach:\n• Aufgaben «Nach dem Erledigen» werden um die Ferientage verschoben.\n• Aufgaben «Nach festem Plan» lassen die Termine in den Ferien aus.\n• Einmalige Aufgaben aus den Ferien sind am ersten Tag danach fällig.</string>
+    <string name="holiday_error_order">Das Ende darf nicht vor dem Anfang liegen.</string>
+
+    <!-- Catching up (F10.6) -->
+    <string name="reschedule_action">Neu planen</string>
+    <string name="reschedule_title">Ab heute neu planen?</string>
+    <string name="reschedule_body">Alle überfälligen Aufgaben bekommen ein neues Datum: Aufgaben «Nach dem Erledigen» zählen ab heute, Aufgaben «Nach festem Plan» springen zum nächsten Termin. Nichts wird als erledigt gespeichert.</string>
 </resources>
