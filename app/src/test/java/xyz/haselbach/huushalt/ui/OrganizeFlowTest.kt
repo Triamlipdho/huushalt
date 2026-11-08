@@ -57,7 +57,7 @@ class OrganizeFlowTest {
     fun checklistAsksBeforeCompletingAndResets() {
         waitFor("Noch keine Aufgaben")
         createChore("Bad putzen", room = "Bad", checklist = listOf("Lavabo", "WC"))
-        waitFor("Bad · Heute fällig · 0/2")
+        waitFor("Bad · 0/2")
 
         compose.onNodeWithText("Bad putzen").performClick()
         waitFor("Checkliste 0/2")
@@ -76,7 +76,7 @@ class OrganizeFlowTest {
     fun roomFilterAndPausing() {
         waitFor("Noch keine Aufgaben")
         createChore("Kühlschrank putzen", room = "Küche")
-        waitFor("Küche · Heute fällig")
+        waitFor("Küche")
         createChore("Staubsaugen")
         waitFor("Staubsaugen")
 

@@ -22,6 +22,7 @@ import xyz.haselbach.huushalt.domain.Chore
 import xyz.haselbach.huushalt.ui.components.ChoreRow
 import xyz.haselbach.huushalt.ui.components.EmptyState
 import xyz.haselbach.huushalt.ui.components.SectionHeader
+import xyz.haselbach.huushalt.ui.components.withFabSpace
 
 /** All chores, sortable by due date or name (F3.4). Any chore can be marked done here (F4.7). */
 @Composable
@@ -45,7 +46,7 @@ fun AllChoresScreen(
     val byArea = open.groupBy { it.areaName }
         .toSortedMap(compareBy<String?> { it == null }.thenBy { it?.lowercase() })
 
-    LazyColumn(contentPadding = contentPadding) {
+    LazyColumn(contentPadding = contentPadding.withFabSpace()) {
         item(key = "sort") {
             Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(selected = sort == Sort.DUE, onClick = { sort = Sort.DUE }, label = { Text(stringResource(R.string.all_sort_due)) })
@@ -62,7 +63,7 @@ fun AllChoresScreen(
             byArea.forEach { (area, list) ->
                 item(key = "area-$area") { SectionHeader(area ?: noAreaLabel) }
                 items(list.sortedWith(byDue), key = { it.id }) { chore ->
-                    ChoreRow(chore, today, onClick = { onOpen(chore) }, onComplete = { onComplete(chore) })
+                    ChoreRow(chore, today, onClick = { onOpen(chore) }, onComplete = { onComplete(chore) }, showArea = false)
                 }
             }
         } else {

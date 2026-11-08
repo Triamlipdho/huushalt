@@ -78,8 +78,15 @@ private fun StreakCard(streaks: Streaks) {
     Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(stringResource(R.string.streak_title), style = MaterialTheme.typography.titleSmall)
-            Text("🔥 " + days(streaks.current), style = MaterialTheme.typography.headlineMedium)
-            Text(stringResource(R.string.streak_best, days(streaks.best)), style = MaterialTheme.typography.bodyMedium)
+            if (streaks.current > 0) {
+                Text("🔥 " + days(streaks.current), style = MaterialTheme.typography.headlineMedium)
+            } else {
+                // No guilt: a missing streak is an invitation, not a zero (F7).
+                Text(stringResource(R.string.streak_none), style = MaterialTheme.typography.titleLarge)
+            }
+            if (streaks.best > 0) {
+                Text(stringResource(R.string.streak_best, days(streaks.best)), style = MaterialTheme.typography.bodyMedium)
+            }
             Text(
                 stringResource(R.string.streak_free_day_note),
                 style = MaterialTheme.typography.bodySmall,
@@ -138,7 +145,8 @@ private fun WeekChart(stats: Stats) {
         ) {
             stats.weeks.forEach { week ->
                 Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.Bottom, horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(week.count.toString(), style = MaterialTheme.typography.labelSmall)
+                    // Empty weeks get no "0" label, just the thin bar.
+                    Text(if (week.count > 0) week.count.toString() else "", style = MaterialTheme.typography.labelSmall)
                     Box(
                         Modifier
                             .fillMaxWidth()
