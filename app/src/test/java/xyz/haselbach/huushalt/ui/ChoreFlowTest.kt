@@ -1,8 +1,11 @@
 package xyz.haselbach.huushalt.ui
 
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -51,7 +54,8 @@ class ChoreFlowTest {
 
         compose.onNodeWithContentDescription("«Staubsaugen» als erledigt markieren").performClick()
         waitFor("1 von 1 erledigt")
-        waitFor("«Staubsaugen» erledigt")
+        // The last open chore of the day is celebrated (F7.5).
+        waitFor("Alles erledigt für heute 🎉")
         screenshot("4-done")
 
         compose.onNodeWithText("Rückgängig").performClick()
@@ -76,7 +80,42 @@ class ChoreFlowTest {
         waitFor("Zuletzt erledigt")
         compose.waitUntilDoesNotExist(hasText("Noch nicht erledigt."), timeoutMillis = 5_000)
         screenshot("5-detail")
+
+        // Delete the history entry again (F6.4).
+        compose.onNodeWithText("Verlauf").assertExists()
+        compose.onAllNodesWithText(today()).onLast().performClick()
+        compose.onNodeWithText("Eintrag löschen").performClick()
+        waitFor("Noch nicht erledigt.")
     }
+
+    @Test
+    fun progressTabShowsStatsAndActivity() {
+        waitFor("Noch keine Aufgaben")
+        compose.onNodeWithContentDescription("Neue Aufgabe").performClick()
+        compose.onNodeWithText("Name").performTextInput("Staubsaugen")
+        compose.onNodeWithText("Speichern").performClick()
+        waitFor("0 von 1 erledigt")
+        compose.onNodeWithContentDescription("«Staubsaugen» als erledigt markieren").performClick()
+        waitFor("1 von 1 erledigt")
+
+        compose.onNodeWithText("Fortschritt").performClick()
+        waitFor("Alles erledigt in Folge")
+        waitFor("🔥 1 Tag")
+        compose.onNodeWithText("Zuletzt erledigt").assertExists()
+        compose.onNodeWithText("100 %").assertExists()
+        compose.onNodeWithText("Alle Aufgaben").assertExists() // only the tab label, not the title
+        compose.onAllNodesWithText("Fortschritt").assertCountEquals(2) // title and tab label
+        screenshot("8-progress")
+
+        // Without motivation, the streak is hidden (F7.9).
+        compose.onNodeWithContentDescription("Einstellungen").performClick()
+        compose.onNodeWithText("Serien und Feiern").performClick()
+        compose.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        waitFor("Zuletzt erledigt")
+        compose.waitUntilDoesNotExist(hasText("Alles erledigt in Folge"), timeoutMillis = 5_000)
+    }
+
+    private fun today() = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("EE, dd.MM.yyyy", java.util.Locale.forLanguageTag("de-CH")))
 
     private fun waitFor(text: String) {
         compose.waitUntilAtLeastOneExists(hasText(text), timeoutMillis = 5_000)

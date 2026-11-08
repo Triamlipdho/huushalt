@@ -1,5 +1,6 @@
 package xyz.haselbach.huushalt.ui.home
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -12,7 +13,9 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
@@ -32,10 +35,12 @@ fun HomeScreen(
     onOpen: (Chore) -> Unit,
     onComplete: (Chore) -> Unit,
     header: @Composable () -> Unit = {},
+    /** Current "Alles erledigt" streak, or null when motivation is turned off (F7.2, F7.9). */
+    streak: Int? = null,
 ) {
     LazyColumn(contentPadding = contentPadding) {
         item(key = "header") { header() }
-        item(key = "progress") { Progress(state) }
+        item(key = "progress") { Progress(state, streak) }
         when {
             !state.hasChores -> item(key = "empty") {
                 EmptyState(stringResource(R.string.home_no_chores_title), stringResource(R.string.home_no_chores_body))
@@ -51,7 +56,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun Progress(state: HomeState) {
+private fun Progress(state: HomeState, streak: Int?) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -59,9 +64,13 @@ private fun Progress(state: HomeState) {
         Text(state.today.formatLong(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (state.total > 0) {
             Text(stringResource(R.string.home_progress, state.doneToday, state.total), style = MaterialTheme.typography.titleMedium)
-            LinearProgressIndicator(
-                progress = { state.doneToday.toFloat() / state.total },
-                modifier = Modifier.fillMaxWidth(),
+            val progress by animateFloatAsState(state.doneToday.toFloat() / state.total, label = "progress")
+            LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+        }
+        if (streak != null && streak >= 2) {
+            Text(
+                stringResource(R.string.streak_home, pluralStringResource(R.plurals.streak_days, streak, streak)),
+                style = MaterialTheme.typography.bodyMedium,
             )
         }
     }

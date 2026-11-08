@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -21,8 +22,14 @@ import kotlinx.coroutines.launch
 import xyz.haselbach.huushalt.HuushaltApplication
 import xyz.haselbach.huushalt.data.ChoreRepository
 import xyz.haselbach.huushalt.data.CompletionEntity
+import xyz.haselbach.huushalt.data.CompletionWithName
+import xyz.haselbach.huushalt.data.toRecord
 import xyz.haselbach.huushalt.domain.Chore
 import xyz.haselbach.huushalt.domain.DueStatus
+import xyz.haselbach.huushalt.domain.Progress
+import xyz.haselbach.huushalt.domain.Stats
+import xyz.haselbach.huushalt.domain.Streaks
+import xyz.haselbach.huushalt.reminders.OpenChores
 import xyz.haselbach.huushalt.domain.Schedule
 
 data class HomeState(
@@ -38,8 +45,19 @@ data class HomeState(
     val total: Int get() = doneToday + open
 }
 
+/** Streaks, statistics and the activity log (F6.3, F7.2 to F7.4). */
+data class ProgressState(
+    val streaks: Streaks,
+    val stats: Stats,
+    /** Most recent completions with chore names, newest first. */
+    val recent: List<CompletionWithName>,
+    /** Per chore: completions in a row done on time (F7.3). */
+    val choreStreaks: Map<Long, Int>,
+)
+
 sealed interface UiEvent {
-    data class Completed(val choreName: String, val completionId: Long) : UiEvent
+    /** [allDoneToday]: this was the last open chore of the day, time to celebrate (F7.5). */
+    data class Completed(val choreName: String, val completionId: Long, val allDoneToday: Boolean) : UiEvent
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -70,6 +88,32 @@ class ChoresViewModel(private val repository: ChoreRepository) : ViewModel() {
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    /** Null while loading. */
+    val progress: StateFlow<ProgressState?> =
+        combine(repository.chores, repository.allCompletions, _today) { chores, completions, today ->
+            val records = completions.map { it.completion.toRecord() }
+            val start = chores.minOfOrNull { it.createdDate }
+            val streaks = if (start == null) {
+                Streaks(0, 0)
+            } else {
+                Progress.streaks(
+                    overdueDays = Progress.overdueDays(records, chores.mapNotNull { it.dueDate }, start, today),
+                    start = start,
+                    today = today,
+                    todayClean = OpenChores.of(chores, today).isEmpty,
+                )
+            }
+            val byChore = records.groupBy { it.choreId }
+            ProgressState(
+                streaks = streaks,
+                stats = Progress.stats(records, today),
+                recent = completions.take(RECENT_COUNT),
+                choreStreaks = chores.associate { chore ->
+                    chore.id to Progress.choreStreak(byChore[chore.id].orEmpty(), chore.status(today) is DueStatus.Overdue)
+                },
+            )
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     private val events = Channel<UiEvent>(Channel.BUFFERED)
     val uiEvents: Flow<UiEvent> = events.receiveAsFlow()
 
@@ -82,9 +126,20 @@ class ChoresViewModel(private val repository: ChoreRepository) : ViewModel() {
 
     fun complete(chore: Chore) {
         viewModelScope.launch {
-            val completionId = repository.complete(chore.id, LocalDate.now()) ?: return@launch
-            events.send(UiEvent.Completed(chore.name, completionId))
+            val today = LocalDate.now()
+            val wasOpen = chore.status(today).let { it is DueStatus.Overdue || it == DueStatus.Today }
+            val completionId = repository.complete(chore.id, today) ?: return@launch
+            val allDone = wasOpen && OpenChores.of(repository.chores.first(), today).isEmpty
+            events.send(UiEvent.Completed(chore.name, completionId, allDone))
         }
+    }
+
+    fun changeCompletionDate(completionId: Long, date: LocalDate) {
+        viewModelScope.launch { repository.changeCompletionDate(completionId, date) }
+    }
+
+    fun deleteCompletion(completionId: Long) {
+        viewModelScope.launch { repository.deleteCompletion(completionId) }
     }
 
     fun undoCompletion(completionId: Long) {
@@ -104,6 +159,8 @@ class ChoresViewModel(private val repository: ChoreRepository) : ViewModel() {
     }
 
     companion object {
+        private const val RECENT_COUNT = 100
+
         val Factory = viewModelFactory {
             initializer {
                 val app = this[APPLICATION_KEY] as HuushaltApplication

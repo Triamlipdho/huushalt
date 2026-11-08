@@ -51,6 +51,7 @@ fun SettingsScreen(
     access: NotificationAccess,
     onBack: () -> Unit,
     onChange: ((ReminderSettings) -> ReminderSettings) -> Unit,
+    onMotivationChange: (Boolean) -> Unit,
 ) {
     val reminders = settings.reminders
     var editing by rememberSaveable { mutableStateOf<TimeField?>(null) }
@@ -116,6 +117,18 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(16.dp),
+            )
+            HorizontalDivider()
+            SectionHeader(stringResource(R.string.settings_motivation))
+            ListItem(
+                modifier = Modifier.toggleable(
+                    value = settings.motivationEnabled,
+                    role = Role.Switch,
+                    onValueChange = onMotivationChange,
+                ),
+                headlineContent = { Text(stringResource(R.string.settings_motivation_switch)) },
+                supportingContent = { Text(stringResource(R.string.settings_motivation_summary)) },
+                trailingContent = { Switch(checked = settings.motivationEnabled, onCheckedChange = null) },
             )
         }
     }

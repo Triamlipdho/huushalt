@@ -20,6 +20,9 @@ class ChoreRepository(
 
     fun completions(choreId: Long): Flow<List<CompletionEntity>> = dao.observeCompletions(choreId)
 
+    /** Everything ever done, newest first (F6.3, F7). */
+    val allCompletions: Flow<List<CompletionWithName>> = dao.observeAllCompletions()
+
     fun choreIdsDoneOn(date: LocalDate): Flow<Set<Long>> = dao.observeChoreIdsDoneOn(date).map { it.toSet() }
 
     /**
@@ -68,6 +71,37 @@ class ChoreRepository(
         val completion = dao.getCompletion(completionId) ?: return@withTransaction
         dao.deleteCompletion(completionId)
         dao.updateDueDate(completion.choreId, completion.previousDueDate)
+    }
+
+    /**
+     * Moves a past completion to another day (F6.4). If it is the chore's latest completion, the
+     * next due date is recalculated as if the chore had been done on [doneDate].
+     */
+    suspend fun changeCompletionDate(completionId: Long, doneDate: LocalDate) = db.withTransaction {
+        val completion = dao.getCompletion(completionId) ?: return@withTransaction
+        val chore = dao.getChore(completion.choreId) ?: return@withTransaction
+        val isLatest = dao.getLatestCompletion(chore.id)?.id == completionId
+        dao.updateCompletionDate(completionId, doneDate)
+        if (isLatest) {
+            val nextDue = ScheduleCalculator.dueDateAfterCompletion(
+                chore.schedule(),
+                chore.anchorDate,
+                completion.previousDueDate,
+                doneDate,
+            )
+            dao.updateDueDate(chore.id, nextDue)
+        }
+    }
+
+    /**
+     * Deletes a past completion (F6.4). Deleting the latest one works like undo and restores the
+     * due date from before; older ones are only removed from the history.
+     */
+    suspend fun deleteCompletion(completionId: Long) = db.withTransaction {
+        val completion = dao.getCompletion(completionId) ?: return@withTransaction
+        val isLatest = dao.getLatestCompletion(completion.choreId)?.id == completionId
+        dao.deleteCompletion(completionId)
+        if (isLatest) dao.updateDueDate(completion.choreId, completion.previousDueDate)
     }
 
     /** Moves the next due date (F4.4). */
