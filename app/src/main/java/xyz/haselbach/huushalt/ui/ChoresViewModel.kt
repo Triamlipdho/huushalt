@@ -14,7 +14,10 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -28,6 +31,7 @@ import xyz.haselbach.huushalt.data.toRecord
 import xyz.haselbach.huushalt.domain.Area
 import xyz.haselbach.huushalt.domain.ChecklistItem
 import xyz.haselbach.huushalt.domain.Chore
+import xyz.haselbach.huushalt.domain.ChoreTemplate
 import xyz.haselbach.huushalt.domain.DueStatus
 import xyz.haselbach.huushalt.domain.Holiday
 import xyz.haselbach.huushalt.domain.Progress
@@ -35,6 +39,7 @@ import xyz.haselbach.huushalt.domain.RepeatUnit
 import xyz.haselbach.huushalt.domain.Stats
 import xyz.haselbach.huushalt.domain.Streaks
 import xyz.haselbach.huushalt.reminders.OpenChores
+import xyz.haselbach.huushalt.settings.AppSettings
 import xyz.haselbach.huushalt.domain.Schedule
 
 data class HomeState(
@@ -72,7 +77,12 @@ sealed interface UiEvent {
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class ChoresViewModel(private val repository: ChoreRepository) : ViewModel() {
+class ChoresViewModel(
+    private val repository: ChoreRepository,
+    settings: Flow<AppSettings> = flowOf(AppSettings()),
+) : ViewModel() {
+
+    private val weekStart = settings.map { it.firstDayOfWeek }.distinctUntilChanged()
 
     private val _today = MutableStateFlow(LocalDate.now())
     val today: StateFlow<LocalDate> = _today.asStateFlow()
@@ -109,10 +119,10 @@ class ChoresViewModel(private val repository: ChoreRepository) : ViewModel() {
         combine(
             repository.chores,
             repository.allCompletions,
-            _today,
+            combine(_today, weekStart, ::Pair),
             repository.holidays,
             repository.missedPeriods,
-        ) { chores, completions, today, holidays, missed ->
+        ) { chores, completions, (today, firstDay), holidays, missed ->
             val tolerance = chores.associate { it.id to it.toleranceDays }
             val records = completions.map { it.completion.toRecord(tolerance[it.completion.choreId] ?: 0) }
             val start = chores.minOfOrNull { it.createdDate }
@@ -131,12 +141,13 @@ class ChoresViewModel(private val repository: ChoreRepository) : ViewModel() {
                     today = today,
                     todayClean = OpenChores.of(chores, today).isEmpty,
                     holidayDays = holidays.flatMap { it.daysUntil(today).toList() }.toSet(),
+                    weekStart = firstDay,
                 )
             }
             val byChore = records.groupBy { it.choreId }
             ProgressState(
                 streaks = streaks,
-                stats = Progress.stats(records, today),
+                stats = Progress.stats(records, today, firstDay),
                 recent = completions.take(RECENT_COUNT),
                 choreStreaks = chores.associate { chore ->
                     chore.id to Progress.choreStreak(byChore[chore.id].orEmpty(), chore.status(today) is DueStatus.Overdue)
@@ -207,6 +218,10 @@ class ChoresViewModel(private val repository: ChoreRepository) : ViewModel() {
         }
     }
 
+    fun addFromTemplates(templates: List<ChoreTemplate>) {
+        viewModelScope.launch { repository.addFromTemplates(templates) }
+    }
+
     /** Skips the current occurrence (F4.5). */
     fun skip(choreId: Long) {
         viewModelScope.launch { repository.skip(choreId) }
@@ -255,7 +270,7 @@ class ChoresViewModel(private val repository: ChoreRepository) : ViewModel() {
         val Factory = viewModelFactory {
             initializer {
                 val app = this[APPLICATION_KEY] as HuushaltApplication
-                ChoresViewModel(app.repository)
+                ChoresViewModel(app.repository, app.settings.settings)
             }
         }
     }

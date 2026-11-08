@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import java.time.LocalDate
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
@@ -47,7 +48,7 @@ class HolidayFlowTest {
         waitFor("Staubsaugen")
 
         compose.onNodeWithContentDescription("Einstellungen").performClick()
-        compose.onNodeWithText("Ferienmodus").performClick()
+        compose.onNodeWithText("Ferienmodus").performScrollTo().performClick()
         waitFor("Bis und mit")
         compose.onNodeWithText("Speichern").performClick()
 

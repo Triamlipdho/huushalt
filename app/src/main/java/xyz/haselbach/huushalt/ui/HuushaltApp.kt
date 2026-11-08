@@ -1,6 +1,8 @@
 package xyz.haselbach.huushalt.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -35,6 +37,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -46,6 +49,8 @@ import xyz.haselbach.huushalt.HuushaltApplication
 import xyz.haselbach.huushalt.R
 import xyz.haselbach.huushalt.domain.Chore
 import xyz.haselbach.huushalt.ui.areas.AreasScreen
+import xyz.haselbach.huushalt.ui.catalog.CatalogScreen
+import xyz.haselbach.huushalt.ui.settings.DataViewModel
 import xyz.haselbach.huushalt.ui.chores.AllChoresScreen
 import xyz.haselbach.huushalt.ui.detail.ChoreDetailScreen
 import xyz.haselbach.huushalt.ui.edit.ChoreEditScreen
@@ -65,6 +70,7 @@ private object Route {
     const val SETTINGS = "settings"
     const val HOLIDAY = "holiday"
     const val AREAS = "areas"
+    const val CATALOG = "catalog"
     val tabs = setOf(TODAY, ALL, PROGRESS)
     fun detail(id: Long) = "detail:$id"
     fun edit(id: Long?) = "edit:${id ?: "new"}"
@@ -80,6 +86,7 @@ fun HuushaltApp(
     openTodayRequests: Int = 0,
     viewModel: ChoresViewModel = viewModel(factory = ChoresViewModel.Factory),
     settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory),
+    dataViewModel: DataViewModel = viewModel(factory = DataViewModel.Factory),
 ) {
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refreshToday() }
 
@@ -199,6 +206,7 @@ fun HuushaltApp(
                     onChangeHoliday = { open(Route.HOLIDAY) },
                     areas = allAreas,
                     onEditChore = { open(Route.edit(it.id)) },
+                    onOpenCatalog = { open(Route.CATALOG) },
                     header = {
                         if (showPermissionCard) {
                             PermissionCard(
@@ -273,6 +281,7 @@ fun HuushaltApp(
                 today = today,
                 areas = allAreas,
                 initialChecklist = initialChecklist,
+                firstDayOfWeek = appSettings.firstDayOfWeek,
                 onClose = ::back,
                 onSave = { draft ->
                     viewModel.save(
@@ -295,15 +304,68 @@ fun HuushaltApp(
             )
         }
 
-        route == Route.SETTINGS -> SettingsScreen(
-            settings = appSettings,
-            access = notificationAccess,
-            onBack = ::back,
-            onChange = { change -> settingsViewModel.update { it.copy(reminders = change(it.reminders)) } },
-            onMotivationChange = { on -> settingsViewModel.update { it.copy(motivationEnabled = on) } },
-            holiday = homeState.activeHoliday ?: homeState.plannedHoliday,
-            onOpenHoliday = { open(Route.HOLIDAY) },
-            onOpenAreas = { open(Route.AREAS) },
+        route == Route.SETTINGS -> {
+            // Export / import via the system file picker (F9.3).
+            val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+                uri?.let(dataViewModel::exportTo)
+            }
+            val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                uri?.let(dataViewModel::readImport)
+            }
+            val pendingImport by dataViewModel.pendingImport.collectAsStateWithLifecycle()
+            val dataMessages = mapOf(
+                DataViewModel.Message.EXPORTED to stringResource(R.string.data_exported),
+                DataViewModel.Message.EXPORT_FAILED to stringResource(R.string.data_export_failed),
+                DataViewModel.Message.IMPORTED to stringResource(R.string.data_imported),
+                DataViewModel.Message.IMPORT_FAILED to stringResource(R.string.data_import_failed),
+                DataViewModel.Message.DELETED to stringResource(R.string.data_deleted),
+            )
+            LaunchedEffect(dataViewModel) {
+                dataViewModel.events.collect { snackbarHostState.showSnackbar(dataMessages.getValue(it)) }
+            }
+            SettingsScreen(
+                settings = appSettings,
+                access = notificationAccess,
+                onBack = ::back,
+                onChange = { change -> settingsViewModel.update { it.copy(reminders = change(it.reminders)) } },
+                onMotivationChange = { on -> settingsViewModel.update { it.copy(motivationEnabled = on) } },
+                holiday = homeState.activeHoliday ?: homeState.plannedHoliday,
+                onOpenHoliday = { open(Route.HOLIDAY) },
+                onOpenAreas = { open(Route.AREAS) },
+                onThemeChange = { theme -> settingsViewModel.update { it.copy(theme = theme) } },
+                onFirstDayChange = { day -> settingsViewModel.update { it.copy(firstDayOfWeek = day) } },
+                onOpenCatalog = { open(Route.CATALOG) },
+                onExport = { exportLauncher.launch("huushalt-${today}.json") },
+                onImport = { importLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
+                onDeleteAll = dataViewModel::deleteAll,
+                snackbarHostState = snackbarHostState,
+            )
+            pendingImport?.let { backup ->
+                AlertDialog(
+                    onDismissRequest = dataViewModel::cancelImport,
+                    title = { Text(stringResource(R.string.data_import_title)) },
+                    text = {
+                        Text(
+                            stringResource(
+                                R.string.data_import_body,
+                                pluralStringResource(R.plurals.count_chores, backup.chores.size, backup.chores.size),
+                                pluralStringResource(R.plurals.count_completions, backup.completions.size, backup.completions.size),
+                            ),
+                        )
+                    },
+                    confirmButton = { TextButton(onClick = dataViewModel::confirmImport) { Text(stringResource(R.string.data_import_confirm)) } },
+                    dismissButton = { TextButton(onClick = dataViewModel::cancelImport) { Text(stringResource(R.string.action_cancel)) } },
+                )
+            }
+        }
+
+        route == Route.CATALOG -> CatalogScreen(
+            existingNames = allChores.map { it.name }.toSet(),
+            onClose = ::back,
+            onAdd = { templates ->
+                viewModel.addFromTemplates(templates)
+                backToTab()
+            },
         )
 
         route == Route.AREAS -> AreasScreen(

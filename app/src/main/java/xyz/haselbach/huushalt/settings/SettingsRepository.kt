@@ -6,7 +6,9 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import java.time.DayOfWeek
 import java.time.LocalTime
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -28,7 +30,13 @@ data class AppSettings(
     val permissionRequested: Boolean = false,
     /** Streaks and celebrations (F7.9). */
     val motivationEnabled: Boolean = true,
+    /** Light, dark or as the system (F9.4). */
+    val theme: ThemeMode = ThemeMode.SYSTEM,
+    /** Start of the week for statistics and weekday lists (F9.4). */
+    val firstDayOfWeek: DayOfWeek = DayOfWeek.MONDAY,
 )
+
+enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -50,6 +58,8 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             prefs[PERMISSION_CARD_DISMISSED] = new.permissionCardDismissed
             prefs[PERMISSION_REQUESTED] = new.permissionRequested
             prefs[MOTIVATION_ENABLED] = new.motivationEnabled
+            prefs[THEME] = new.theme.name
+            prefs[FIRST_DAY_OF_WEEK] = new.firstDayOfWeek.value
         }
     }
 
@@ -61,6 +71,8 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val PERMISSION_CARD_DISMISSED = booleanPreferencesKey("permission_card_dismissed")
         val PERMISSION_REQUESTED = booleanPreferencesKey("permission_requested")
         val MOTIVATION_ENABLED = booleanPreferencesKey("motivation_enabled")
+        val THEME = stringPreferencesKey("theme")
+        val FIRST_DAY_OF_WEEK = intPreferencesKey("first_day_of_week")
 
         fun Preferences.toSettings(): AppSettings {
             val defaults = ReminderSettings()
@@ -74,6 +86,8 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
                 permissionCardDismissed = this[PERMISSION_CARD_DISMISSED] ?: false,
                 permissionRequested = this[PERMISSION_REQUESTED] ?: false,
                 motivationEnabled = this[MOTIVATION_ENABLED] ?: true,
+                theme = this[THEME]?.let { name -> ThemeMode.entries.find { it.name == name } } ?: ThemeMode.SYSTEM,
+                firstDayOfWeek = this[FIRST_DAY_OF_WEEK]?.let { DayOfWeek.of(it) } ?: DayOfWeek.MONDAY,
             )
         }
 

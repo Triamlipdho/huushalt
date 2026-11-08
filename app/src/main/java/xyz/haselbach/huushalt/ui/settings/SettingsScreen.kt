@@ -2,8 +2,12 @@ package xyz.haselbach.huushalt.ui.settings
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -16,7 +20,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -28,16 +35,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import java.time.DayOfWeek
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import xyz.haselbach.huushalt.R
 import xyz.haselbach.huushalt.domain.Holiday
 import xyz.haselbach.huushalt.settings.AppSettings
 import xyz.haselbach.huushalt.settings.ReminderSettings
+import xyz.haselbach.huushalt.settings.ThemeMode
 import xyz.haselbach.huushalt.ui.components.SectionHeader
 import xyz.haselbach.huushalt.ui.formatShort
 
@@ -58,11 +69,21 @@ fun SettingsScreen(
     holiday: Holiday?,
     onOpenHoliday: () -> Unit,
     onOpenAreas: () -> Unit,
+    onThemeChange: (ThemeMode) -> Unit = {},
+    onFirstDayChange: (DayOfWeek) -> Unit = {},
+    onOpenCatalog: () -> Unit = {},
+    onExport: () -> Unit = {},
+    onImport: () -> Unit = {},
+    onDeleteAll: () -> Unit = {},
+    snackbarHostState: SnackbarHostState? = null,
 ) {
+    var choosing by rememberSaveable { mutableStateOf<Choice?>(null) }
+    var confirmDeleteAll by rememberSaveable { mutableStateOf(false) }
     val reminders = settings.reminders
     var editing by rememberSaveable { mutableStateOf<TimeField?>(null) }
 
     Scaffold(
+        snackbarHost = { snackbarHostState?.let { SnackbarHost(it) } },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.settings_title)) },
@@ -125,7 +146,26 @@ fun SettingsScreen(
                 modifier = Modifier.padding(16.dp),
             )
             HorizontalDivider()
-            SectionHeader(stringResource(R.string.areas_title))
+            SectionHeader(stringResource(R.string.settings_display))
+            ListItem(
+                modifier = Modifier.clickable { choosing = Choice.THEME },
+                headlineContent = { Text(stringResource(R.string.settings_theme)) },
+                supportingContent = { Text(stringResource(themeLabel(settings.theme))) },
+            )
+            ListItem(
+                modifier = Modifier.clickable { choosing = Choice.FIRST_DAY },
+                headlineContent = { Text(stringResource(R.string.settings_first_day)) },
+                supportingContent = {
+                    Text(stringArrayResource(R.array.weekdays_long)[settings.firstDayOfWeek.value - 1])
+                },
+            )
+            HorizontalDivider()
+            SectionHeader(stringResource(R.string.settings_chores))
+            ListItem(
+                modifier = Modifier.clickable(onClick = onOpenCatalog),
+                headlineContent = { Text(stringResource(R.string.catalog_title)) },
+                supportingContent = { Text(stringResource(R.string.catalog_settings_summary)) },
+            )
             ListItem(
                 modifier = Modifier.clickable(onClick = onOpenAreas),
                 headlineContent = { Text(stringResource(R.string.areas_title)) },
@@ -158,7 +198,66 @@ fun SettingsScreen(
                 supportingContent = { Text(stringResource(R.string.settings_motivation_summary)) },
                 trailingContent = { Switch(checked = settings.motivationEnabled, onCheckedChange = null) },
             )
+            HorizontalDivider()
+            SectionHeader(stringResource(R.string.settings_data))
+            ListItem(
+                modifier = Modifier.clickable(onClick = onExport),
+                headlineContent = { Text(stringResource(R.string.data_export)) },
+                supportingContent = { Text(stringResource(R.string.data_export_summary)) },
+            )
+            ListItem(
+                modifier = Modifier.clickable(onClick = onImport),
+                headlineContent = { Text(stringResource(R.string.data_import)) },
+                supportingContent = { Text(stringResource(R.string.data_import_summary)) },
+            )
+            ListItem(
+                modifier = Modifier.clickable { confirmDeleteAll = true },
+                headlineContent = { Text(stringResource(R.string.data_delete_all), color = MaterialTheme.colorScheme.error) },
+                supportingContent = { Text(stringResource(R.string.data_delete_all_summary)) },
+            )
         }
+    }
+
+    when (choosing) {
+        Choice.THEME -> ChoiceDialog(
+            title = stringResource(R.string.settings_theme),
+            options = ThemeMode.entries.map { it to stringResource(themeLabel(it)) },
+            selected = settings.theme,
+            onDismiss = { choosing = null },
+            onSelect = {
+                choosing = null
+                onThemeChange(it)
+            },
+        )
+        Choice.FIRST_DAY -> {
+            val names = stringArrayResource(R.array.weekdays_long)
+            ChoiceDialog(
+                title = stringResource(R.string.settings_first_day),
+                options = listOf(DayOfWeek.MONDAY, DayOfWeek.SUNDAY).map { it to names[it.value - 1] },
+                selected = settings.firstDayOfWeek,
+                onDismiss = { choosing = null },
+                onSelect = {
+                    choosing = null
+                    onFirstDayChange(it)
+                },
+            )
+        }
+        null -> Unit
+    }
+
+    if (confirmDeleteAll) {
+        AlertDialog(
+            onDismissRequest = { confirmDeleteAll = false },
+            title = { Text(stringResource(R.string.data_delete_all_title)) },
+            text = { Text(stringResource(R.string.data_delete_all_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDeleteAll = false
+                    onDeleteAll()
+                }) { Text(stringResource(R.string.data_delete_all_confirm), color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { confirmDeleteAll = false }) { Text(stringResource(R.string.action_cancel)) } },
+        )
     }
 
     editing?.let { field ->
@@ -182,6 +281,47 @@ private fun TimePickerDialog(initial: LocalTime, onDismiss: () -> Unit, onConfir
         title = { Text(stringResource(R.string.settings_pick_time)) },
         text = { TimePicker(state = state) },
         confirmButton = { TextButton(onClick = { onConfirm(LocalTime.of(state.hour, state.minute)) }) { Text("OK") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
+}
+
+private enum class Choice { THEME, FIRST_DAY }
+
+private fun themeLabel(theme: ThemeMode) = when (theme) {
+    ThemeMode.SYSTEM -> R.string.theme_system
+    ThemeMode.LIGHT -> R.string.theme_light
+    ThemeMode.DARK -> R.string.theme_dark
+}
+
+/** A single choice from a short list, as radio buttons in a dialog. */
+@Composable
+private fun <T> ChoiceDialog(
+    title: String,
+    options: List<Pair<T, String>>,
+    selected: T,
+    onDismiss: () -> Unit,
+    onSelect: (T) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(Modifier.selectableGroup()) {
+                options.forEach { (value, label) ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .selectable(selected = value == selected, role = Role.RadioButton, onClick = { onSelect(value) })
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = value == selected, onClick = null)
+                        Text(label, modifier = Modifier.padding(start = 16.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = {},
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }

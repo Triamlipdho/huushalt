@@ -198,7 +198,7 @@ coming back to a wall of overdue chores is the fastest way to give up on the app
 | 4 Holidays and catching up | F10.1 to F10.4, F10.6 | Done |
 | 5a Rooms, pausing, checklists | F1.3, F1.4, F1.7, F1.8, F3.5 | Done (F1.9 later) |
 | 5b More schedules and completion options | F2.10 to F2.12, F4.3, F4.5 | Done |
-| 6 Settings and data | F8.2, F9.3, F9.4, F9.6 | Planned |
+| 6 Settings and data | F8.2, F9.3, F9.4, F9.6 | Done (v1.0.0: MVP complete) |
 
 ## Non-functional requirements
 
