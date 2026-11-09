@@ -16,8 +16,8 @@ only the owner can make.
 | 5. Ruleset for `main` | ✅ Added; CI now also runs for documentation-only pull requests |
 | 6. Code security | ✅ Enabled. CodeQL default setup disabled, `codeql.yml` used instead; `github/codeql-action/*` added to the allowed actions |
 | 7. Visibility | ✅ Public |
-| 8. Obtainium | ✅ Token removed. Still to do: revoke the token on GitHub |
-| 9. Verify a release | Open: next release after this change |
+| 8. Obtainium | ✅ Token removed; updates work without it. Revoke the old token on GitHub if not done yet |
+| 9. Verify a release | ✅ v1.3.2: built and signed with the same certificate as v1.3.1, installed over the existing app via Obtainium without a token |
 
 ## Audit summary (2026-11-09)
 
@@ -30,6 +30,7 @@ files.
 | Secrets in git history | **Nothing found.** No keystore, `local.properties`, `.env`, private key, token or password was ever committed. Signing is read only from environment variables (`app/build.gradle.kts`); the workflow takes them from the Actions secrets `HUUSHALT_KEYSTORE_BASE64`, `HUUSHALT_KEYSTORE_PASSWORD`, `HUUSHALT_KEY_ALIAS`, `HUUSHALT_KEY_PASSWORD`. The only long hex strings are Gradle distribution checksums, Room schema hashes and Action commit SHAs. The only binary is `gradle/wrapper/gradle-wrapper.jar` (validated by CI). **No key rotation and no history rewrite are needed.** |
 | Commit authors | `Triamlipdho <6876738+Triamlipdho@users.noreply.github.com>` (16 commits, GitHub noreply), `Claude <noreply@anthropic.com>` (27), `dependabot[bot]` (1). Committer is `GitHub <noreply@github.com>` or Claude. **No private email address is exposed.** |
 | Personal data in files | No real name, email, hostname or local path. Test data uses made-up chores. The package name `xyz.haselbach.huushalt` contains a surname (see decision 2 below). |
+| Signing certificate | Found after publishing: the release certificate's subject (`CN=`) is the owner's full name. It is part of every APK and is printed by the *Verify signature* step in the public Actions logs. It can't be changed without a new key, which would break updates; accepted along with the package name. For a future key, use a neutral `CN` such as `huushalt`. |
 | Commit messages and PR descriptions | 26 commit messages and the Claude-authored PR descriptions contain `Claude-Session: https://claude.ai/code/session_…` links. These sessions are private: only the owner's account can open them; to everyone else they are dead links that reveal nothing except that Claude Code was used. |
 | Internal-only content | README and `docs/MVP.md` described the repository as private and Obtainium as needing a token: **✅ updated in the PR.** No TODOs, no screenshots or other large files in the repository. |
 | Workflows | CI runs on `pull_request` (never `pull_request_target`), uses no secrets, token is read-only. Release runs only on tag pushes and manual runs (both need write access to the repository). All actions are pinned to commit SHAs. Hardened further: **✅ done in the PR** (see step 4). |
