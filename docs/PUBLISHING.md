@@ -14,7 +14,7 @@ only the owner can make.
 | 3. Merged branches | ✅ Deleted |
 | 4. Actions settings | ✅ Set. Fork pull requests: *Require approval for all external contributors* |
 | 5. Ruleset for `main` | ✅ Added; CI now also runs for documentation-only pull requests |
-| 6. Code security | ✅ Enabled |
+| 6. Code security | ✅ Enabled. CodeQL: switch from default setup to `codeql.yml` (see step 6) |
 | 7. Visibility | ✅ Public |
 | 8. Obtainium | ✅ Token removed. Still to do: revoke the token on GitHub |
 | 9. Verify a release | Open: next release after this change |
@@ -96,7 +96,8 @@ Still to do in the settings:
 1. *Settings → Actions → General*
    - **Actions permissions:** keep *Allow all actions and reusable workflows*, or choose *Allow
      Triamlipdho, and select non-Triamlipdho, actions and reusable workflows* and allow
-     `actions/*`, `gradle/actions/*`.
+     `actions/*`, `gradle/actions/*`, `github/codeql-action/*`. An action missing from this list
+     makes its workflow fail immediately with *startup failure*.
    - **Approval for running fork pull request workflows from contributors** (shown once the
      repository is public): *Require approval for all external contributors*. While the
      repository was private, the separate section *Fork pull request workflows in private
@@ -138,8 +139,12 @@ release tags.
 - **Secret Protection → Secret scanning:** Enable, and **Push protection:** Enable. Free for
   public repositories; scans the whole history after enabling. Check *Security → Secret
   scanning* a few minutes later; it should show no alerts.
-- Optional: **Code scanning → CodeQL analysis → Default setup** (Kotlin and GitHub Actions).
-  Free for public repositories; runs on pushes to `main` and on pull requests.
+- **Code scanning → CodeQL analysis:** use the workflow `.github/workflows/codeql.yml`
+  (*advanced setup*), not *Default setup*. Default setup builds the app itself, and when Gradle
+  takes the compiled Kotlin classes from its build cache, the compiler never runs and the
+  analysis fails with "could not automatically build any of it". The workflow compiles without
+  the build cache. Default setup must be turned off for the workflow's results to be accepted:
+  *CodeQL analysis → ⋯ → Disable CodeQL*, then merge the workflow.
 
 ## 7. Change the visibility
 
