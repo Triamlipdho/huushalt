@@ -15,8 +15,19 @@ local.properties
 
 # Signing: never commit keystores or their passwords
 *.jks
+*.jks.base64
 *.keystore
+*.p12
+*.pfx
 keystore.properties
+
+# Built APKs/bundles outside build/ (e.g. copied for a release)
+*.apk
+*.aab
+
+# Environment files with credentials
+.env
+.env.*
 
 # OS
 .DS_Store

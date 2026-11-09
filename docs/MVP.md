@@ -235,9 +235,8 @@ The other options are kept below for reference.
 1. **Chosen: signed APK via GitHub Releases + Obtainium.**
    A GitHub Actions workflow builds and signs a release APK for every version tag. Obtainium
    watches the repository's releases and offers updates on the phone, so it feels like a store
-   without one. No fees, no review, releases in minutes. The repository is private, so
-   Obtainium needs a fine-grained GitHub access token with read-only access to this
-   repository's contents.
+   without one. No fees, no review, releases in minutes. The repository is public, so
+   Obtainium needs no GitHub access token.
    - The signing key and its passwords are stored as GitHub Actions secrets and backed up
      outside GitHub. Losing the key means updates can no longer be installed over the
      existing app, so data would have to be exported and imported (F9.3).
@@ -286,7 +285,7 @@ Decided for a later release (priority **Later** in the tables above):
 | D1 | Home screen widget in the MVP? | No |
 | D2 | Motivation features? | Yes, see [F7](#f7-motivation) |
 | D3 | Distribution? | GitHub Releases + Obtainium, see [Distribution](#distribution) |
-| D3a | Public or private repository? | Private |
+| D3a | Public or private repository? | Public (was private during development; see [PUBLISHING.md](PUBLISHING.md)) |
 | D4 | Languages? | German only, Swiss spelling (ss instead of ß) |
 | D5 | Checklists / sub-steps? | Yes, optional per chore, see F1.7 to F1.9 |
 | D6 | Cloud backup beyond Android's automatic backup? | No |
