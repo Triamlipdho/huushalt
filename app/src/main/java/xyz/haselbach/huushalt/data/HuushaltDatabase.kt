@@ -17,7 +17,7 @@ import androidx.room.TypeConverters
         ChecklistItemEntity::class,
         ChoreDateEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
     autoMigrations = [
         // 2: holidays and missed periods (F10)
@@ -26,6 +26,8 @@ import androidx.room.TypeConverters
         AutoMigration(from = 2, to = 3),
         // 4: nth weekday, tolerance window, date lists (F2.10 to F2.12)
         AutoMigration(from = 3, to = 4),
+        // 5: chosen symbol and colour (F1.5)
+        AutoMigration(from = 4, to = 5),
     ],
 )
 @TypeConverters(Converters::class)

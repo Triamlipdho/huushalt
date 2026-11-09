@@ -1,6 +1,10 @@
 package xyz.haselbach.huushalt.ui.edit
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -50,6 +54,9 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
@@ -67,6 +74,9 @@ import xyz.haselbach.huushalt.domain.Area
 import xyz.haselbach.huushalt.domain.ChecklistItem
 import xyz.haselbach.huushalt.domain.Chore
 import xyz.haselbach.huushalt.domain.ChoreCatalog
+import xyz.haselbach.huushalt.domain.ChoreColor
+import xyz.haselbach.huushalt.domain.ChoreLook
+import xyz.haselbach.huushalt.domain.ChoreSymbol
 import xyz.haselbach.huushalt.domain.ChoreTemplate
 import xyz.haselbach.huushalt.domain.DateListParser
 import xyz.haselbach.huushalt.domain.RepeatUnit
@@ -74,7 +84,11 @@ import xyz.haselbach.huushalt.domain.Schedule
 import xyz.haselbach.huushalt.domain.ScheduleCalculator
 import xyz.haselbach.huushalt.domain.ScheduleError
 import xyz.haselbach.huushalt.domain.ScheduleMode
+import xyz.haselbach.huushalt.ui.components.ChoreAvatar
 import xyz.haselbach.huushalt.ui.components.LocalDatePickerDialog
+import xyz.haselbach.huushalt.ui.components.colors
+import xyz.haselbach.huushalt.ui.components.icon
+import xyz.haselbach.huushalt.ui.components.label
 import xyz.haselbach.huushalt.ui.formatLong
 import xyz.haselbach.huushalt.ui.formatShort
 
@@ -136,6 +150,10 @@ fun ChoreEditScreen(
     var pasteText by rememberSaveable { mutableStateOf("") }
     var showDateListPicker by rememberSaveable { mutableStateOf(false) }
     var toleranceDays by rememberSaveable { mutableIntStateOf(source?.toleranceDays ?: 0) }
+    // Chosen symbol and colour (F1.5); null: guessed from the name.
+    var symbolKey by rememberSaveable { mutableStateOf(source?.symbolKey) }
+    var colorKey by rememberSaveable { mutableStateOf(source?.colorKey) }
+    var showSymbolPicker by rememberSaveable { mutableStateOf(false) }
     var showErrors by rememberSaveable { mutableStateOf(false) }
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
     var showDeleteConfirm by rememberSaveable { mutableStateOf(false) }
@@ -209,6 +227,8 @@ fun ChoreEditScreen(
                 newAreaName = typed.takeIf { existing == null },
                 checklist = checklist.toList(),
                 toleranceDays = if (schedule.isRepeating) toleranceDays else 0,
+                symbol = ChoreSymbol.byKey(symbolKey),
+                color = ChoreColor.entries.firstOrNull { it.name == colorKey },
             ),
         )
     }
@@ -259,6 +279,11 @@ fun ChoreEditScreen(
             if (chore == null && copyOf == null && !suggestionPicked) {
                 QuickSuggestions(query = name, existingNames = existingNames, onPick = ::applyTemplate)
             }
+            SymbolRow(
+                look = ChoreLook.of(name, symbolKey, colorKey),
+                automatic = symbolKey == null && colorKey == null,
+                onChange = { showSymbolPicker = true },
+            )
             OutlinedTextField(
                 value = notes,
                 onValueChange = { notes = it },
@@ -478,6 +503,23 @@ fun ChoreEditScreen(
         )
     }
 
+    if (showSymbolPicker) {
+        SymbolPickerDialog(
+            current = ChoreLook.of(name, symbolKey, colorKey),
+            onDismiss = { showSymbolPicker = false },
+            onAutomatic = {
+                symbolKey = null
+                colorKey = null
+                showSymbolPicker = false
+            },
+            onPick = { look ->
+                symbolKey = look.symbol.name
+                colorKey = look.color.name
+                showSymbolPicker = false
+            },
+        )
+    }
+
     if (showDateListPicker) {
         LocalDatePickerDialog(
             initial = dates.lastOrNull()?.plusWeeks(2)?.takeIf { it >= today } ?: today,
@@ -623,6 +665,8 @@ data class ChoreDraft(
     val newAreaName: String?,
     val checklist: List<ChecklistDraft>,
     val toleranceDays: Int = 0,
+    val symbol: ChoreSymbol? = null,
+    val color: ChoreColor? = null,
 )
 
 private val checklistSaver = listSaver<SnapshotStateList<ChecklistDraft>, String>(
@@ -692,10 +736,88 @@ private fun QuickSuggestions(query: String, existingNames: Set<String>, onPick: 
         )
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             matches.forEach { template ->
-                SuggestionChip(onClick = { onPick(template) }, label = { Text(template.name) })
+                SuggestionChip(
+                    onClick = { onPick(template) },
+                    label = { Text(template.name) },
+                    icon = { Icon(ChoreSymbol.guess(template.name).icon, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                )
             }
         }
     }
 }
 
 private const val QUICK_SUGGESTIONS = 6
+
+/** Current symbol with a button to change it (F1.5). */
+@Composable
+private fun SymbolRow(look: ChoreLook, automatic: Boolean, onChange: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        ChoreAvatar(look, size = 48.dp)
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.symbol), style = MaterialTheme.typography.titleSmall)
+            Text(
+                stringResource(if (automatic) R.string.symbol_automatic else R.string.symbol_chosen),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        OutlinedButton(onClick = onChange) { Text(stringResource(R.string.symbol_change)) }
+    }
+}
+
+/** Pick a symbol and a colour, or go back to the automatic one (F1.5). */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SymbolPickerDialog(
+    current: ChoreLook,
+    onDismiss: () -> Unit,
+    onAutomatic: () -> Unit,
+    onPick: (ChoreLook) -> Unit,
+) {
+    var symbol by rememberSaveable { mutableStateOf(current.symbol) }
+    var color by rememberSaveable { mutableStateOf(current.color) }
+    val symbolNames = ChoreSymbol.entries.associateWith { stringResource(it.label) }
+    val colorNames = ChoreColor.entries.associateWith { stringResource(it.label) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.symbol_choose)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ChoreSymbol.entries.forEach { option ->
+                        val selected = option == symbol
+                        Box(
+                            Modifier
+                                .clip(CircleShape)
+                                .border(if (selected) 3.dp else 0.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                .selectable(selected = selected, role = Role.RadioButton, onClick = {
+                                    // A new symbol brings its own colour, unless one was picked explicitly before.
+                                    if (color == symbol.defaultColor) color = option.defaultColor
+                                    symbol = option
+                                })
+                                .padding(4.dp)
+                                .semantics { contentDescription = symbolNames.getValue(option) },
+                        ) { ChoreAvatar(ChoreLook(option, color), size = 44.dp) }
+                    }
+                }
+                Text(stringResource(R.string.symbol_color), style = MaterialTheme.typography.titleSmall)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ChoreColor.entries.forEach { option ->
+                        val selected = option == color
+                        Box(
+                            Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(option.colors().container)
+                                .border(if (selected) 3.dp else 1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                .selectable(selected = selected, role = Role.RadioButton, onClick = { color = option })
+                                .semantics { contentDescription = colorNames.getValue(option) },
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onPick(ChoreLook(symbol, color)) }) { Text(stringResource(R.string.symbol_apply)) } },
+        dismissButton = { TextButton(onClick = onAutomatic) { Text(stringResource(R.string.symbol_reset)) } },
+    )
+}

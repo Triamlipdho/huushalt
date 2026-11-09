@@ -23,7 +23,13 @@ data class Chore(
     val checklistDone: Int = 0,
     /** Days after the due date that still count as on time, e.g. "±2 Tage" (F2.12). */
     val toleranceDays: Int = 0,
+    /** Chosen symbol and colour, null when guessed from the name (F1.5). */
+    val symbolKey: String? = null,
+    val colorKey: String? = null,
 ) {
+    /** Symbol and colour to show (F1.5). */
+    val look: ChoreLook get() = ChoreLook.of(name, symbolKey, colorKey)
+
     val isFinished: Boolean get() = dueDate == null
 
     /** Due today or within the tolerance window: belongs to today's list. */

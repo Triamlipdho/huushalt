@@ -8,6 +8,8 @@ import xyz.haselbach.huushalt.domain.Area
 import xyz.haselbach.huushalt.domain.ChecklistItem
 import xyz.haselbach.huushalt.domain.Chore
 import xyz.haselbach.huushalt.domain.ChoreCatalog
+import xyz.haselbach.huushalt.domain.ChoreColor
+import xyz.haselbach.huushalt.domain.ChoreSymbol
 import xyz.haselbach.huushalt.domain.ChoreTemplate
 import xyz.haselbach.huushalt.domain.DueStatus
 import xyz.haselbach.huushalt.domain.Holiday
@@ -53,6 +55,9 @@ class ChoreRepository(
         checklist: List<ChecklistDraft>? = null,
         /** Days after the due date that still count as on time (F2.12). */
         toleranceDays: Int = 0,
+        /** Chosen symbol and colour; null keeps them guessed from the name (F1.5). */
+        symbol: ChoreSymbol? = null,
+        color: ChoreColor? = null,
     ): Long {
         val normalized = normalize(schedule, nextDue)
         val entity = ChoreEntity(
@@ -66,6 +71,8 @@ class ChoreRepository(
             dayOfMonth = normalized.dayOfMonth,
             weekOfMonth = normalized.weekOfMonth,
             toleranceDays = if (normalized.isRepeating) toleranceDays.coerceIn(0, MAX_TOLERANCE_DAYS) else 0,
+            symbol = symbol?.name,
+            color = color?.name,
             anchorDate = nextDue,
             dueDate = ScheduleCalculator.initialDueDate(normalized, nextDue),
             createdAt = now(),

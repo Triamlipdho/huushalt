@@ -33,6 +33,7 @@ import xyz.haselbach.huushalt.R
 import xyz.haselbach.huushalt.domain.Stats
 import xyz.haselbach.huushalt.domain.Streaks
 import xyz.haselbach.huushalt.ui.ProgressState
+import xyz.haselbach.huushalt.ui.components.ChoreAvatar
 import xyz.haselbach.huushalt.ui.components.SectionHeader
 import xyz.haselbach.huushalt.ui.formatLong
 
@@ -63,6 +64,7 @@ fun ProgressScreen(
         items(state.recent, key = { it.completion.id }) { entry ->
             ListItem(
                 modifier = Modifier.clickable { onOpenChore(entry.completion.choreId) },
+                leadingContent = { ChoreAvatar(entry.look) },
                 headlineContent = { Text(entry.choreName) },
                 supportingContent = { Text(entry.completion.doneDate.formatLong()) },
             )
