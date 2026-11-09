@@ -340,6 +340,8 @@ fun HuushaltApp(
                 DataViewModel.Message.EXPORT_FAILED to stringResource(R.string.data_export_failed),
                 DataViewModel.Message.IMPORTED to stringResource(R.string.data_imported),
                 DataViewModel.Message.IMPORT_FAILED to stringResource(R.string.data_import_failed),
+                DataViewModel.Message.IMPORT_INVALID to stringResource(R.string.data_import_invalid),
+                DataViewModel.Message.IMPORT_TOO_LARGE to stringResource(R.string.data_import_too_large),
                 DataViewModel.Message.DELETED to stringResource(R.string.data_deleted),
             )
             LaunchedEffect(dataViewModel) {

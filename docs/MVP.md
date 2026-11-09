@@ -202,6 +202,7 @@ coming back to a wall of overdue chores is the fastest way to give up on the app
 | 6 Settings and data | F8.2, F9.3, F9.4, F9.6 | Done (v1.0.0: MVP complete) |
 | 7 Visual review, quick create | Rework after a screenshot review; quick create from suggestions, F1.10 duplicate, F3.7 search, F9.7 app shortcuts, themed icon | Done |
 | 8 Home Assistant | F5.8 | Done |
+| Security hardening | Import validates the whole file (schedules, date range 1900 to 2200, references) and refuses it without changes; import files limited to 5 MB; GitHub Actions pinned to commit SHAs | Done |
 
 ## Non-functional requirements
 

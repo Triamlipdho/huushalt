@@ -1,10 +1,14 @@
 package xyz.haselbach.huushalt.data
 
 import androidx.room.withTransaction
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import java.time.LocalDate
+import java.time.ZoneOffset
 import org.json.JSONArray
 import org.json.JSONObject
 import xyz.haselbach.huushalt.domain.RepeatUnit
+import xyz.haselbach.huushalt.domain.Schedule
 import xyz.haselbach.huushalt.domain.ScheduleMode
 
 /** Everything stored about chores, as written to and read from a backup file (F9.3). */
@@ -19,9 +23,104 @@ data class Backup(
 ) {
     class InvalidBackupException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
+    /** The file is larger than [MAX_FILE_BYTES]; it was not read completely. */
+    class TooLargeException : Exception("Backup file too large")
+
+    /**
+     * Checks that the backup can be stored and calculated with safely: valid schedules, dates in a
+     * sane range and references that point to existing rows. Throws [InvalidBackupException] for
+     * the first problem, so a crafted or damaged file is refused as a whole.
+     */
+    fun validate() {
+        fun fail(message: String): Nothing = throw InvalidBackupException(message)
+        fun check(ok: Boolean, message: () -> String) { if (!ok) fail(message()) }
+        fun checkDate(date: LocalDate?, what: String) = check(date == null || date in DATE_RANGE) { "$what out of range: $date" }
+        fun checkMillis(millis: Long, what: String) = check(millis in MILLIS_RANGE) { "$what out of range: $millis" }
+        fun checkIds(ids: List<Long>, what: String) {
+            check(ids.all { it > 0 }) { "$what: ids must be positive" }
+            check(ids.toSet().size == ids.size) { "$what: duplicate ids" }
+        }
+
+        checkIds(areas.map { it.id }, "areas")
+        checkIds(chores.map { it.id }, "chores")
+        checkIds(dates.map { it.id }, "dates")
+        checkIds(checklist.map { it.id }, "checklist")
+        checkIds(completions.map { it.id }, "completions")
+        checkIds(holidays.map { it.id }, "holidays")
+        checkIds(missedPeriods.map { it.id }, "missedPeriods")
+
+        val areaIds = areas.map { it.id }.toSet()
+        val choreIds = chores.map { it.id }.toSet()
+        fun checkChore(choreId: Long, what: String) = check(choreId in choreIds) { "$what points to missing chore $choreId" }
+
+        dates.forEach {
+            checkChore(it.choreId, "date ${it.id}")
+            checkDate(it.date, "date ${it.id}")
+        }
+        check(dates.map { it.choreId to it.date }.toSet().size == dates.size) { "duplicate chore dates" }
+        val datesByChore = dates.groupBy({ it.choreId }, { it.date })
+
+        chores.forEach { chore ->
+            val what = "chore ${chore.id}"
+            check(chore.schedule(datesByChore[chore.id].orEmpty()).validate() == null) { "$what: invalid schedule" }
+            check(chore.weekdays in 0..ALL_WEEKDAYS) { "$what: invalid weekdays" }
+            check(chore.dayOfMonth == null || chore.dayOfMonth in 1..31) { "$what: invalid day of month" }
+            check(chore.weekOfMonth == null || chore.weekOfMonth in 1..4 || chore.weekOfMonth == Schedule.LAST_WEEK) { "$what: invalid week of month" }
+            check(chore.toleranceDays in 0..MAX_TOLERANCE_DAYS) { "$what: invalid tolerance" }
+            check(chore.areaId == null || chore.areaId in areaIds) { "$what points to missing area ${chore.areaId}" }
+            checkDate(chore.anchorDate, "$what anchor date")
+            checkDate(chore.dueDate, "$what due date")
+            checkMillis(chore.createdAt, "$what createdAt")
+        }
+        checklist.forEach { checkChore(it.choreId, "checklist item ${it.id}") }
+        completions.forEach {
+            checkChore(it.choreId, "completion ${it.id}")
+            checkDate(it.doneDate, "completion ${it.id}")
+            checkDate(it.previousDueDate, "completion ${it.id} previous due date")
+            checkMillis(it.createdAt, "completion ${it.id} createdAt")
+        }
+        holidays.forEach {
+            checkDate(it.startDate, "holiday ${it.id} start")
+            checkDate(it.endDate, "holiday ${it.id} end")
+            check(it.startDate <= it.endDate) { "holiday ${it.id} ends before it starts" }
+            checkMillis(it.createdAt, "holiday ${it.id} createdAt")
+        }
+        missedPeriods.forEach {
+            checkChore(it.choreId, "missed period ${it.id}")
+            checkDate(it.fromDate, "missed period ${it.id} from")
+            checkDate(it.untilDate, "missed period ${it.id} until")
+            check(it.fromDate <= it.untilDate) { "missed period ${it.id} ends before it starts" }
+        }
+    }
+
     companion object {
         /** Format version; files from newer app versions are refused. */
         const val FORMAT = 1
+
+        /** Backup files are a few hundred KB at most; larger files are refused before parsing. */
+        const val MAX_FILE_BYTES = 5 * 1024 * 1024
+
+        /** Dates outside this range are refused, so date calculations stay small and can't overflow. */
+        val DATE_RANGE: ClosedRange<LocalDate> = LocalDate.of(1900, 1, 1)..LocalDate.of(2200, 12, 31)
+        private val MILLIS_RANGE = DATE_RANGE.start.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()..
+            DATE_RANGE.endInclusive.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+        private const val ALL_WEEKDAYS = 0b1111111
+
+        /**
+         * Reads [input] as UTF-8 text, at most [maxBytes]. Throws [TooLargeException] without
+         * reading further if the file is larger.
+         */
+        fun readText(input: InputStream, maxBytes: Int = MAX_FILE_BYTES): String {
+            val out = ByteArrayOutputStream()
+            val buffer = ByteArray(64 * 1024)
+            while (true) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                if (out.size().toLong() + read > maxBytes) throw TooLargeException()
+                out.write(buffer, 0, read)
+            }
+            return out.toString(Charsets.UTF_8.name())
+        }
     }
 }
 
@@ -41,8 +140,9 @@ class BackupStore(private val db: HuushaltDatabase, private val now: () -> Long 
         )
     }
 
-    /** Replaces all data with [backup], or changes nothing if it fails. */
+    /** Replaces all data with [backup], or changes nothing if it fails or [backup] is invalid. */
     suspend fun restore(backup: Backup) = db.withTransaction {
+        backup.validate()
         deleteAllInTransaction()
         dao.insertAreas(backup.areas)
         dao.insertChores(backup.chores)
@@ -106,7 +206,7 @@ class BackupStore(private val db: HuushaltDatabase, private val now: () -> Long 
         )
     }.toString(2)
 
-    /** Reads a backup file completely before anything is changed. */
+    /** Reads and validates a backup file completely before anything is changed. */
     fun fromJson(text: String): Backup = try {
         val root = JSONObject(text)
         if (root.optString("app") != "huushalt") throw Backup.InvalidBackupException("Not a huushalt backup")
@@ -127,7 +227,7 @@ class BackupStore(private val db: HuushaltDatabase, private val now: () -> Long 
             missedPeriods = root.getJSONArray("missedPeriods").objects().map {
                 MissedPeriodEntity(it.getLong("id"), it.getLong("choreId"), LocalDate.parse(it.getString("fromDate")), LocalDate.parse(it.getString("untilDate")))
             },
-        )
+        ).also { it.validate() }
     } catch (e: Backup.InvalidBackupException) {
         throw e
     } catch (e: Exception) {

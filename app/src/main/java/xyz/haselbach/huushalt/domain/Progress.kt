@@ -47,8 +47,9 @@ object Progress {
         missedPeriods: List<MissedPeriod> = emptyList(),
     ): Set<LocalDate> {
         val days = HashSet<LocalDate>()
+        val earliest = maxOf(start, historyStart(today))
         fun addRange(from: LocalDate, toExclusive: LocalDate) {
-            var day = maxOf(from, start)
+            var day = maxOf(from, earliest)
             val end = minOf(toExclusive, today)
             while (day < end) {
                 days += day
@@ -81,7 +82,7 @@ object Progress {
         var run = 0
         var best = 0
         val freeDaysUsed = HashSet<LocalDate>()
-        var day = start
+        var day = maxOf(start, historyStart(today))
         while (day <= last) {
             if (day in holidayDays) {
                 day = day.plusDays(1)
@@ -127,6 +128,14 @@ object Progress {
             },
         )
     }
+
+    /**
+     * Streaks and overdue days look back at most this far, so a damaged start date (e.g. a creation
+     * time from year 1) can't make the calculation loop over millions of days.
+     */
+    const val MAX_HISTORY_YEARS = 100L
+
+    fun historyStart(today: LocalDate): LocalDate = today.minusYears(MAX_HISTORY_YEARS)
 
     /** Punctuality is measured over the last 30 days. */
     const val ON_TIME_DAYS = 30L
