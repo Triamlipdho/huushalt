@@ -31,6 +31,8 @@ import xyz.haselbach.huushalt.data.toRecord
 import xyz.haselbach.huushalt.domain.Area
 import xyz.haselbach.huushalt.domain.ChecklistItem
 import xyz.haselbach.huushalt.domain.Chore
+import xyz.haselbach.huushalt.domain.ChoreColor
+import xyz.haselbach.huushalt.domain.ChoreSymbol
 import xyz.haselbach.huushalt.domain.ChoreTemplate
 import xyz.haselbach.huushalt.domain.DueStatus
 import xyz.haselbach.huushalt.domain.Holiday
@@ -253,10 +255,12 @@ class ChoresViewModel(
         checklist: List<ChecklistDraft>,
         newAreaName: String? = null,
         toleranceDays: Int = 0,
+        symbol: ChoreSymbol? = null,
+        color: ChoreColor? = null,
     ) {
         viewModelScope.launch {
             val area = if (!newAreaName.isNullOrBlank()) repository.addArea(newAreaName) else areaId
-            repository.save(id, name, notes, schedule, nextDue, area, checklist, toleranceDays)
+            repository.save(id, name, notes, schedule, nextDue, area, checklist, toleranceDays, symbol, color)
         }
     }
 

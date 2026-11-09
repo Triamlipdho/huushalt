@@ -13,6 +13,7 @@ import java.time.LocalDate
 import xyz.haselbach.huushalt.domain.Area
 import xyz.haselbach.huushalt.domain.ChecklistItem
 import xyz.haselbach.huushalt.domain.Chore
+import xyz.haselbach.huushalt.domain.ChoreLook
 import xyz.haselbach.huushalt.domain.CompletionRecord
 import xyz.haselbach.huushalt.domain.Holiday
 import xyz.haselbach.huushalt.domain.MissedPeriod
@@ -53,6 +54,10 @@ data class ChoreEntity(
     @ColumnInfo(defaultValue = "NULL") val weekOfMonth: Int? = null,
     /** Days after the due date that still count as on time (F2.12). */
     @ColumnInfo(defaultValue = "0") val toleranceDays: Int = 0,
+    /** Chosen symbol ([ChoreSymbol] name); null: guessed from the name (F1.5). */
+    @ColumnInfo(defaultValue = "NULL") val symbol: String? = null,
+    /** Chosen colour ([ChoreColor] name); null: the symbol's default colour (F1.5). */
+    @ColumnInfo(defaultValue = "NULL") val color: String? = null,
 )
 
 /** One date of a chore with a list of dates (F2.11). */
@@ -186,6 +191,8 @@ fun ChoreWithLastDone.toDomain() = Chore(
     checklistTotal = checklistTotal,
     checklistDone = checklistDone,
     toleranceDays = chore.toleranceDays,
+    symbolKey = chore.symbol,
+    colorKey = chore.color,
 )
 
 fun ChoreWithLastDone.dates(): List<LocalDate> =
@@ -199,7 +206,11 @@ fun ChecklistItemEntity.toDomain() = ChecklistItem(id, text, checked)
 data class CompletionWithName(
     @Embedded val completion: CompletionEntity,
     @ColumnInfo(name = "choreName") val choreName: String,
-)
+    @ColumnInfo(name = "choreSymbol") val choreSymbol: String? = null,
+    @ColumnInfo(name = "choreColor") val choreColor: String? = null,
+) {
+    val look: ChoreLook get() = ChoreLook.of(choreName, choreSymbol, choreColor)
+}
 
 fun CompletionEntity.toRecord(toleranceDays: Int = 0) = CompletionRecord(choreId, doneDate, previousDueDate, toleranceDays)
 

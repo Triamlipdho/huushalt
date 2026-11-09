@@ -54,6 +54,7 @@ import xyz.haselbach.huushalt.data.CompletionEntity
 import xyz.haselbach.huushalt.domain.ChecklistItem
 import xyz.haselbach.huushalt.domain.Chore
 import xyz.haselbach.huushalt.domain.DueStatus
+import xyz.haselbach.huushalt.ui.components.ChoreAvatar
 import xyz.haselbach.huushalt.ui.components.LocalDatePickerDialog
 import xyz.haselbach.huushalt.ui.components.SectionHeader
 import xyz.haselbach.huushalt.ui.dueLabel
@@ -233,11 +234,14 @@ private fun Summary(chore: Chore, today: LocalDate, streak: Int?) {
     val overdue = chore.status(today) is DueStatus.Overdue
     Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(
-                dueLabel(chore, today),
-                style = MaterialTheme.typography.titleLarge,
-                color = if (overdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                ChoreAvatar(chore.look, size = 56.dp)
+                Text(
+                    dueLabel(chore, today),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = if (overdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                )
+            }
             InfoRow(Icons.Filled.Refresh, scheduleLabel(chore.schedule, chore.toleranceDays, today))
             chore.areaName?.let { InfoRow(Icons.Filled.Place, it) }
             InfoRow(

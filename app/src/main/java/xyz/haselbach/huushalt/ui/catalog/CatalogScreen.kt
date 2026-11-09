@@ -23,13 +23,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import xyz.haselbach.huushalt.R
 import xyz.haselbach.huushalt.domain.ChoreCatalog
+import xyz.haselbach.huushalt.domain.ChoreLook
 import xyz.haselbach.huushalt.domain.ChoreTemplate
+import xyz.haselbach.huushalt.ui.components.ChoreAvatar
 import xyz.haselbach.huushalt.ui.components.SectionHeader
 import xyz.haselbach.huushalt.ui.scheduleLabel
 
@@ -99,7 +102,8 @@ fun CatalogScreen(
                             role = Role.Checkbox,
                             onValueChange = { if (it) selected.add(template.name) else selected.remove(template.name) },
                         ),
-                        leadingContent = { Checkbox(checked = checked || exists, onCheckedChange = null, enabled = !exists) },
+                        leadingContent = { ChoreAvatar(ChoreLook.of(template.name, null, null), Modifier.alpha(if (exists) 0.5f else 1f)) },
+                        trailingContent = { Checkbox(checked = checked || exists, onCheckedChange = null, enabled = !exists) },
                         headlineContent = { Text(template.name) },
                         supportingContent = {
                             Text(if (exists) stringResource(R.string.catalog_exists) else scheduleLabel(template.schedule))

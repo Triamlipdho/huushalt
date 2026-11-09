@@ -23,7 +23,7 @@ interface ChoreDao {
 
     @Query(
         """
-        SELECT completions.*, chores.name AS choreName
+        SELECT completions.*, chores.name AS choreName, chores.symbol AS choreSymbol, chores.color AS choreColor
         FROM completions JOIN chores ON chores.id = completions.choreId
         ORDER BY completions.doneDate DESC, completions.id DESC
         """,

@@ -313,6 +313,8 @@ fun HuushaltApp(
                         draft.checklist,
                         draft.newAreaName,
                         draft.toleranceDays,
+                        draft.symbol,
+                        draft.color,
                     )
                     // A saved copy shows up in the list, not on the original's detail screen.
                     if (isCopy) backToTab() else back()

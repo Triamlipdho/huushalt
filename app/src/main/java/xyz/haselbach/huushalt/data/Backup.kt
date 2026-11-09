@@ -140,6 +140,7 @@ class BackupStore(private val db: HuushaltDatabase, private val now: () -> Long 
         .put("anchorDate", anchorDate.toString()).put("dueDate", dueDate?.toString() ?: JSONObject.NULL)
         .put("createdAt", createdAt).put("areaId", areaId ?: JSONObject.NULL).put("paused", paused)
         .put("weekOfMonth", weekOfMonth ?: JSONObject.NULL).put("toleranceDays", toleranceDays)
+        .put("symbol", symbol ?: JSONObject.NULL).put("color", color ?: JSONObject.NULL)
 
     private fun JSONObject.toChore() = ChoreEntity(
         id = getLong("id"),
@@ -157,11 +158,15 @@ class BackupStore(private val db: HuushaltDatabase, private val now: () -> Long 
         paused = optBoolean("paused", false),
         weekOfMonth = optIntOrNull("weekOfMonth"),
         toleranceDays = optInt("toleranceDays", 0),
+        symbol = optStringOrNull("symbol"),
+        color = optStringOrNull("color"),
     )
 
     private fun JSONArray.objects(): List<JSONObject> = (0 until length()).map { getJSONObject(it) }
 
     private fun JSONObject.optDate(key: String): LocalDate? = if (!has(key) || isNull(key)) null else LocalDate.parse(getString(key))
+
+    private fun JSONObject.optStringOrNull(key: String): String? = if (!has(key) || isNull(key)) null else getString(key)
 
     private fun JSONObject.optIntOrNull(key: String): Int? = if (!has(key) || isNull(key)) null else getInt(key)
 }

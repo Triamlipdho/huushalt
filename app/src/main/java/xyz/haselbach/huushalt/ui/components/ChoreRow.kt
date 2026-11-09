@@ -13,6 +13,7 @@ import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -55,6 +56,7 @@ fun ChoreRow(
     val errorColor = MaterialTheme.colorScheme.error
     ListItem(
         modifier = modifier.clickable(onClick = onClick),
+        leadingContent = { ChoreAvatar(chore.look, Modifier.alpha(if (chore.paused || chore.isFinished) 0.5f else 1f)) },
         headlineContent = { Text(chore.name, maxLines = 2, overflow = TextOverflow.Ellipsis) },
         supportingContent = if (parts.isEmpty()) null else {
             {

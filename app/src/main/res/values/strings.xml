@@ -356,4 +356,51 @@
     <string name="shortcut_new_long">Neue Aufgabe erfassen</string>
     <string name="shortcut_catalog_short">Vorschläge</string>
     <string name="shortcut_catalog_long">Aufgaben aus Vorschlägen hinzufügen</string>
+
+    <!-- Symbols (F1.5) -->
+    <string name="symbol">Symbol</string>
+    <string name="symbol_automatic">Passend zum Namen gewählt</string>
+    <string name="symbol_chosen">Selbst gewählt</string>
+    <string name="symbol_change">Ändern</string>
+    <string name="symbol_choose">Symbol wählen</string>
+    <string name="symbol_color">Farbe</string>
+    <string name="symbol_apply">Übernehmen</string>
+    <string name="symbol_reset">Automatisch</string>
+
+    <string name="symbol_trash">Kehricht</string>
+    <string name="symbol_recycling">Recycling</string>
+    <string name="symbol_plants">Pflanzen</string>
+    <string name="symbol_window">Fenster</string>
+    <string name="symbol_fridge">Kühlschrank</string>
+    <string name="symbol_oven">Backofen</string>
+    <string name="symbol_kettle">Wasserkocher</string>
+    <string name="symbol_dishes">Geschirr</string>
+    <string name="symbol_kitchen">Küche</string>
+    <string name="symbol_bed">Bett</string>
+    <string name="symbol_laundry">Wäsche</string>
+    <string name="symbol_ironing">Bügeln</string>
+    <string name="symbol_towels">Kleider und Tücher</string>
+    <string name="symbol_shower">Dusche</string>
+    <string name="symbol_bath">Bad</string>
+    <string name="symbol_drain">Abfluss</string>
+    <string name="symbol_air">Lüftung und Filter</string>
+    <string name="symbol_smoke_alarm">Rauchmelder</string>
+    <string name="symbol_vacuum">Putzen</string>
+    <string name="symbol_dusting">Staub und Glanz</string>
+    <string name="symbol_pets">Haustier</string>
+    <string name="symbol_shopping">Einkaufen</string>
+    <string name="symbol_paperwork">Papierkram</string>
+    <string name="symbol_repair">Reparatur</string>
+    <string name="symbol_car">Fahrzeug</string>
+    <string name="symbol_sofa">Wohnzimmer</string>
+    <string name="symbol_home">Haushalt</string>
+    <string name="color_blue">Blau</string>
+    <string name="color_teal">Türkis</string>
+    <string name="color_green">Grün</string>
+    <string name="color_yellow">Gelb</string>
+    <string name="color_orange">Orange</string>
+    <string name="color_red">Rot</string>
+    <string name="color_pink">Rosa</string>
+    <string name="color_purple">Violett</string>
+    <string name="color_grey">Grau</string>
 </resources>
