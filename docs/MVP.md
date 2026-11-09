@@ -114,6 +114,7 @@ Two scheduling modes are needed, because chores behave differently:
 | F5.5 | Per-chore reminder at a specific time | Could |
 | F5.6 | Quiet days (e.g. no reminders on Sunday) | Could |
 | F5.7 | Evening reminder at a second time I choose (e.g. 19:00), only if chores due today are still open. Can be turned off | Should |
+| F5.8 | Other apps on the phone, e.g. the Home Assistant Companion app when I arrive home, can ask for the overview of today's chores. Off by default, no network needed | Could |
 
 ### F6 History
 
@@ -200,6 +201,7 @@ coming back to a wall of overdue chores is the fastest way to give up on the app
 | 5b More schedules and completion options | F2.10 to F2.12, F4.3, F4.5 | Done |
 | 6 Settings and data | F8.2, F9.3, F9.4, F9.6 | Done (v1.0.0: MVP complete) |
 | 7 Visual review, quick create | Rework after a screenshot review; quick create from suggestions, F1.10 duplicate, F3.7 search, F9.7 app shortcuts, themed icon | Done |
+| 8 Home Assistant | F5.8 | Done |
 
 ## Non-functional requirements
 

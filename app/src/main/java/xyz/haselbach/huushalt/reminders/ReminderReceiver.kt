@@ -37,6 +37,32 @@ class ReminderReceiver : BroadcastReceiver() {
     }
 }
 
+/**
+ * Lets other apps on the phone ask for the overview of today's chores (F5.8), e.g. the Home
+ * Assistant Companion app with a `command_broadcast_intent` notification when you arrive home.
+ * Exported without a permission, because such apps can't hold one of ours. That is acceptable:
+ * the only effect is a local notification, and it does nothing unless turned on in the settings.
+ */
+class ExternalTriggerReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action != ACTION_SHOW_TODAY) return
+        val app = context.applicationContext as HuushaltApplication
+        val pending = goAsync()
+        app.scope.launch {
+            try {
+                app.reminders.onExternalTrigger()
+            } finally {
+                pending.finish()
+            }
+        }
+    }
+
+    companion object {
+        /** Kept stable: it is typed into Home Assistant automations. */
+        const val ACTION_SHOW_TODAY = "xyz.haselbach.huushalt.action.SHOW_TODAY"
+    }
+}
+
 /** Alarms are lost on reboot and must follow time and time zone changes (N8). */
 class RescheduleReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {

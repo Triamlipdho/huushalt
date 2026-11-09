@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationManager
+import android.content.Intent
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import kotlinx.coroutines.flow.first
@@ -113,5 +114,55 @@ class RemindersTest {
         app.reminders.onAlarm(ReminderKind.MORNING)
 
         assertTrue(notifications().isEmpty())
+    }
+
+    @Test
+    fun `other apps can show today's overview once allowed (F5_8)`() = runBlocking {
+        app.repository.save(null, "Staubsaugen", "", weekly, today)
+        app.repository.save(null, "Pflanzen giessen", "", weekly, today.minusDays(2))
+        app.repository.save(null, "Fenster putzen", "", weekly, today.plusDays(3))
+
+        app.reminders.onExternalTrigger()
+        assertTrue("Off by default", notifications().isEmpty())
+
+        app.settings.update { it.copy(reminders = it.reminders.copy(externalTriggerEnabled = true)) }
+        app.reminders.onExternalTrigger()
+
+        val notification = notifications().single()
+        assertEquals("1 heute fällig, 1 überfällig", notification.title())
+        assertEquals("Pflanzen giessen, Staubsaugen", notification.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
+    }
+
+    @Test
+    fun `other apps can't show anything with reminders off or during holidays`() = runBlocking {
+        app.repository.save(null, "Staubsaugen", "", weekly, today)
+        app.settings.update { it.copy(reminders = it.reminders.copy(enabled = false, externalTriggerEnabled = true)) }
+        app.reminders.onExternalTrigger()
+        assertTrue(notifications().isEmpty())
+
+        app.settings.update { it.copy(reminders = it.reminders.copy(enabled = true)) }
+        app.repository.saveHoliday(null, today, today.plusDays(3), today)
+        app.reminders.onExternalTrigger()
+        assertTrue(notifications().isEmpty())
+    }
+
+    @Test
+    fun `broadcast from another app reaches the receiver (F5_8)`() {
+        runBlocking {
+            app.repository.save(null, "Staubsaugen", "", weekly, today)
+            app.settings.update { it.copy(reminders = it.reminders.copy(externalTriggerEnabled = true)) }
+        }
+        // Like Home Assistant's command_broadcast_intent: action plus package, no class name.
+        val intent = Intent(ExternalTriggerReceiver.ACTION_SHOW_TODAY).setPackage(app.packageName)
+        assertEquals(
+            ExternalTriggerReceiver::class.java.name,
+            app.packageManager.queryBroadcastReceivers(intent, 0).single().activityInfo.name,
+        )
+        ExternalTriggerReceiver().onReceive(app, intent)
+        // The receiver works on the app's scope; wait for it, but not forever.
+        val deadline = System.currentTimeMillis() + 10_000
+        while (notifications().isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(20)
+
+        assertEquals("1 Aufgabe heute", notifications().single().title())
     }
 }
