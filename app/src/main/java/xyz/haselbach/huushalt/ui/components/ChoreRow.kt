@@ -103,8 +103,9 @@ fun ChoreRow(
                     Text(
                         buildAnnotatedString {
                             parts.forEachIndexed { index, part ->
-                                // Keep "·" with the part before it, so a line never starts with it.
-                                if (index > 0) append("\u00A0· ")
+                                // Lines only break inside a part, never at "·", so a short part
+                                // like "0/4" never ends up alone on a line.
+                                if (index > 0) append("\u00A0·\u00A0")
                                 if (overdue && part == due) withStyle(SpanStyle(color = errorColor)) { append(part) } else append(part)
                             }
                         },

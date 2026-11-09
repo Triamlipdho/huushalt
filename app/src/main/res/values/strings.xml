@@ -446,4 +446,8 @@
     </plurals>
     <string name="edit_summary_next">Fällig am %s</string>
     <string name="edit_delete">Aufgabe löschen</string>
+    <string name="stats_last_7">7 Tage</string>
+    <string name="stats_previous_7">Davor: %d</string>
+    <string name="stats_last_30">30 Tage</string>
+    <string name="stats_previous_30">Davor: %d</string>
 </resources>

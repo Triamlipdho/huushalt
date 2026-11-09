@@ -54,7 +54,7 @@ class QuickCreateFlowTest {
         compose.onNodeWithText("Lavabo").assertExists()
         compose.onNodeWithText("Speichern").performClick()
 
-        waitFor("Bad\u00A0· 0/5")
+        waitFor("Bad\u00A0·\u00A00/5")
         compose.onNodeWithText("Bad putzen").assertExists()
     }
 

@@ -13,6 +13,9 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeRight
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -111,6 +114,20 @@ class UndoFlowTest {
         compose.onNodeWithText("Rückgängig").performClick()
         waitFor("Heute fällig")
         compose.onNodeWithText("Staubsaugen").assertExists()
+    }
+
+    @Test
+    fun swipingCompletesOrPostpones() {
+        waitFor("Noch keine Aufgaben")
+        createChore("Staubsaugen")
+        // Swipe left: tomorrow, with undo.
+        compose.onNodeWithText("Staubsaugen").performTouchInput { swipeLeft() }
+        waitFor("«Staubsaugen» verschoben auf", substring = true)
+        compose.onNodeWithText("Rückgängig").performClick()
+        waitFor("Heute fällig")
+        // Swipe right: done.
+        compose.onNodeWithText("Staubsaugen").performTouchInput { swipeRight() }
+        waitFor("1 von 1 erledigt")
     }
 
     private fun screenshot(name: String) = compose.screenshot("undo-$name")

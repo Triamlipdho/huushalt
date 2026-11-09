@@ -11,7 +11,13 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.InsertChart
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Today
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -125,12 +131,13 @@ fun HuushaltApp(
         onRequested = { settingsViewModel.update { it.copy(permissionRequested = true) } },
     )
 
+    val screenStates = rememberSaveableStateHolder()
     fun open(route: String) = stack.add(route)
     fun back() {
-        if (stack.size > 1) stack.removeAt(stack.lastIndex)
+        if (stack.size > 1) screenStates.removeState(stack.removeAt(stack.lastIndex))
     }
     fun backToTab() {
-        while (stack.size > 1) stack.removeAt(stack.lastIndex)
+        while (stack.size > 1) screenStates.removeState(stack.removeAt(stack.lastIndex))
     }
     // In the editor, back is passed on, so it can ask before unsaved changes are lost.
     var editorBackRequests by remember { mutableIntStateOf(0) }
@@ -142,6 +149,7 @@ fun HuushaltApp(
     // suggestions (F9.7).
     LaunchedEffect(navRequest) {
         val target = navRequest?.target ?: return@LaunchedEffect
+        stack.forEach(screenStates::removeState)
         stack.clear()
         stack.add(Route.TODAY)
         when (target) {
@@ -218,249 +226,271 @@ fun HuushaltApp(
     LaunchedEffect(homeState.open) {
         if (homeState.open == 0) (context.applicationContext as HuushaltApplication).notifier.cancel()
     }
-    val route = stack.last()
-
-    when {
-        route in Route.tabs -> MainScaffold(
-            tab = route,
-            snackbarHostState = snackbarHostState,
-            onSelectTab = { tab ->
-                stack.clear()
-                stack.add(tab)
-            },
-            onAdd = { open(Route.edit(null)) },
-            onSettings = { open(Route.SETTINGS) },
-            subtitle = if (route == Route.TODAY) today.formatLong() else null,
-        ) { padding ->
-            if (route == Route.TODAY) {
-                val showPermissionCard = appSettings.reminders.enabled &&
-                    !notificationAccess.canNotify &&
-                    !appSettings.permissionCardDismissed &&
-                    homeState.hasChores
-                HomeScreen(
-                    state = homeState,
-                    contentPadding = padding,
-                    onOpen = { open(Route.detail(it.id)) },
-                    onComplete = ::complete,
-                    streak = progressState.streaks.current.takeIf { appSettings.motivationEnabled },
-                    onReschedule = viewModel::rescheduleOverdue,
-                    onEndHoliday = { viewModel.endHoliday(it.id) },
-                    onChangeHoliday = { open(Route.HOLIDAY) },
-                    areas = allAreas,
-                    onEditChore = { open(Route.edit(it.id)) },
-                    onOpenCatalog = { open(Route.CATALOG) },
-                    onReopen = { viewModel.reopen(it.chore.id, it.completionId) },
-                    onPostponeToTomorrow = { viewModel.postpone(it.id, today.plusDays(1)) },
-                    header = {
-                        if (showPermissionCard) {
-                            PermissionCard(
-                                opensSettings = notificationAccess.opensSettings,
-                                onAllow = notificationAccess.request,
-                                onDismiss = { settingsViewModel.update { it.copy(permissionCardDismissed = true) } },
-                            )
-                        }
-                    },
-                )
-            } else if (route == Route.ALL) {
-                AllChoresScreen(
-                    chores = allChores,
-                    showAreaSort = allAreas.isNotEmpty(),
-                    today = today,
-                    contentPadding = padding,
-                    onOpen = { open(Route.detail(it.id)) },
-                    onComplete = ::complete,
-                )
-            } else {
-                ProgressScreen(
-                    state = progressState,
-                    motivationEnabled = appSettings.motivationEnabled,
-                    contentPadding = padding,
-                    onOpenChore = { open(Route.detail(it)) },
-                )
-            }
-        }
-
-        route.startsWith("detail:") -> {
-            val id = route.removePrefix("detail:").toLong()
-            val chore = allChores.find { it.id == id }
-            if (chore == null) {
-                // Deleted in the meantime.
-                LaunchedEffect(route) { back() }
-                return
-            }
-            val completions by remember(id) { viewModel.completions(id) }.collectAsStateWithLifecycle(emptyList())
-            val checklist by remember(id) { viewModel.checklist(id) }.collectAsStateWithLifecycle(emptyList())
-            ChoreDetailScreen(
-                chore = chore,
-                completions = completions,
-                today = today,
+    /** One screen of the back stack. */
+    @Composable
+    fun Screen(route: String) {
+        when {
+            route in Route.tabs -> MainScaffold(
+                tab = route,
                 snackbarHostState = snackbarHostState,
-                onBack = ::back,
-                onEdit = { open(Route.edit(id)) },
-                onComplete = { complete(chore) },
-                onPostpone = { viewModel.postpone(id, it) },
-                onChangeCompletionDate = { completionId, date -> viewModel.changeCompletionDate(id, completionId, date) },
-                onDeleteCompletion = { completionId -> viewModel.deleteCompletion(id, completionId) },
-                streak = progressState.choreStreaks[id].takeIf { appSettings.motivationEnabled },
-                checklist = checklist,
-                onToggleItem = { viewModel.setChecked(it.id, !it.checked) },
-                onPausedChange = { viewModel.setPaused(id, it) },
-                onCompleteOn = { date -> viewModel.complete(chore, date) },
-                onSkip = { viewModel.skip(id) },
-                onDuplicate = { open(Route.copy(id)) },
-                onDelete = {
-                    viewModel.delete(id)
-                    backToTab()
+                onSelectTab = { tab ->
+                    stack.clear()
+                    stack.add(tab)
                 },
-            )
-        }
-
-        route.startsWith("edit:") || route.startsWith("copy:") -> {
-            val isCopy = route.startsWith("copy:")
-            val sourceId = route.substringAfter(':').toLongOrNull()
-            val source = sourceId?.let { choreId -> allChores.find { it.id == choreId } }
-            if (sourceId != null && source == null) {
-                LaunchedEffect(route) { back() }
-                return
-            }
-            // Editing keeps the id; a copy (F1.10) is saved as a new chore.
-            val id = if (isCopy) null else sourceId
-            val chore = if (isCopy) null else source
-            // The checklist must be loaded before the editor starts, it initialises its fields once.
-            val checklist by remember(sourceId) { sourceId?.let { viewModel.checklist(it) } ?: flowOf(emptyList()) }
-                .collectAsStateWithLifecycle(null)
-            val initialChecklist = checklist ?: return
-            ChoreEditScreen(
-                chore = chore,
-                today = today,
-                areas = allAreas,
-                initialChecklist = initialChecklist,
-                firstDayOfWeek = appSettings.firstDayOfWeek,
-                copyOf = if (isCopy) source else null,
-                existingNames = allChores.map { it.name }.toSet(),
-                backRequests = editorBackRequests,
-                onClose = ::back,
-                onSave = { draft ->
-                    viewModel.save(
-                        id,
-                        draft.name,
-                        draft.notes,
-                        draft.schedule,
-                        draft.nextDue,
-                        draft.areaId,
-                        draft.checklist,
-                        draft.newAreaName,
-                        draft.toleranceDays,
-                        draft.symbol,
-                        draft.color,
+                onAdd = { open(Route.edit(null)) },
+                onSettings = { open(Route.SETTINGS) },
+                subtitle = if (route == Route.TODAY) today.formatLong() else null,
+            ) { padding ->
+                if (route == Route.TODAY) {
+                    val showPermissionCard = appSettings.reminders.enabled &&
+                        !notificationAccess.canNotify &&
+                        !appSettings.permissionCardDismissed &&
+                        homeState.hasChores
+                    HomeScreen(
+                        state = homeState,
+                        contentPadding = padding,
+                        onOpen = { open(Route.detail(it.id)) },
+                        onComplete = ::complete,
+                        streak = progressState.streaks.current.takeIf { appSettings.motivationEnabled },
+                        onReschedule = viewModel::rescheduleOverdue,
+                        onEndHoliday = { viewModel.endHoliday(it.id) },
+                        onChangeHoliday = { open(Route.HOLIDAY) },
+                        areas = allAreas,
+                        onEditChore = { open(Route.edit(it.id)) },
+                        onOpenCatalog = { open(Route.CATALOG) },
+                        onReopen = { viewModel.reopen(it.chore.id, it.completionId) },
+                        onPostponeToTomorrow = { viewModel.postpone(it.id, today.plusDays(1)) },
+                        header = {
+                            if (showPermissionCard) {
+                                PermissionCard(
+                                    opensSettings = notificationAccess.opensSettings,
+                                    onAllow = notificationAccess.request,
+                                    onDismiss = { settingsViewModel.update { it.copy(permissionCardDismissed = true) } },
+                                )
+                            }
+                        },
                     )
-                    // A saved copy shows up in the list, not on the original's detail screen.
-                    if (isCopy) backToTab() else back()
-                },
-                onDelete = {
-                    if (id != null) viewModel.delete(id)
+                } else if (route == Route.ALL) {
+                    AllChoresScreen(
+                        chores = allChores,
+                        showAreaSort = allAreas.isNotEmpty(),
+                        today = today,
+                        contentPadding = padding,
+                        onOpen = { open(Route.detail(it.id)) },
+                        onComplete = ::complete,
+                    )
+                } else {
+                    ProgressScreen(
+                        state = progressState,
+                        motivationEnabled = appSettings.motivationEnabled,
+                        contentPadding = padding,
+                        onOpenChore = { open(Route.detail(it)) },
+                    )
+                }
+            }
+
+            route.startsWith("detail:") -> {
+                val id = route.removePrefix("detail:").toLong()
+                val chore = allChores.find { it.id == id }
+                if (chore == null) {
+                    // Deleted in the meantime.
+                    // Only the screen on top reacts; one still animating out must not.
+                    if (route == stack.last()) LaunchedEffect(route) { back() }
+                    return
+                }
+                val completions by remember(id) { viewModel.completions(id) }.collectAsStateWithLifecycle(emptyList())
+                val checklist by remember(id) { viewModel.checklist(id) }.collectAsStateWithLifecycle(emptyList())
+                ChoreDetailScreen(
+                    chore = chore,
+                    completions = completions,
+                    today = today,
+                    snackbarHostState = snackbarHostState,
+                    onBack = ::back,
+                    onEdit = { open(Route.edit(id)) },
+                    onComplete = { complete(chore) },
+                    onPostpone = { viewModel.postpone(id, it) },
+                    onChangeCompletionDate = { completionId, date -> viewModel.changeCompletionDate(id, completionId, date) },
+                    onDeleteCompletion = { completionId -> viewModel.deleteCompletion(id, completionId) },
+                    streak = progressState.choreStreaks[id].takeIf { appSettings.motivationEnabled },
+                    checklist = checklist,
+                    onToggleItem = { viewModel.setChecked(it.id, !it.checked) },
+                    onPausedChange = { viewModel.setPaused(id, it) },
+                    onCompleteOn = { date -> viewModel.complete(chore, date) },
+                    onSkip = { viewModel.skip(id) },
+                    onDuplicate = { open(Route.copy(id)) },
+                    onDelete = {
+                        viewModel.delete(id)
+                        backToTab()
+                    },
+                )
+            }
+
+            route.startsWith("edit:") || route.startsWith("copy:") -> {
+                val isCopy = route.startsWith("copy:")
+                val sourceId = route.substringAfter(':').toLongOrNull()
+                val source = sourceId?.let { choreId -> allChores.find { it.id == choreId } }
+                if (sourceId != null && source == null) {
+                    // Only the screen on top reacts; one still animating out must not.
+                    if (route == stack.last()) LaunchedEffect(route) { back() }
+                    return
+                }
+                // Editing keeps the id; a copy (F1.10) is saved as a new chore.
+                val id = if (isCopy) null else sourceId
+                val chore = if (isCopy) null else source
+                // The checklist must be loaded before the editor starts, it initialises its fields once.
+                val checklist by remember(sourceId) { sourceId?.let { viewModel.checklist(it) } ?: flowOf(emptyList()) }
+                    .collectAsStateWithLifecycle(null)
+                val initialChecklist = checklist ?: return
+                ChoreEditScreen(
+                    chore = chore,
+                    today = today,
+                    areas = allAreas,
+                    initialChecklist = initialChecklist,
+                    firstDayOfWeek = appSettings.firstDayOfWeek,
+                    copyOf = if (isCopy) source else null,
+                    existingNames = allChores.map { it.name }.toSet(),
+                    backRequests = editorBackRequests,
+                    onClose = ::back,
+                    onSave = { draft ->
+                        viewModel.save(
+                            id,
+                            draft.name,
+                            draft.notes,
+                            draft.schedule,
+                            draft.nextDue,
+                            draft.areaId,
+                            draft.checklist,
+                            draft.newAreaName,
+                            draft.toleranceDays,
+                            draft.symbol,
+                            draft.color,
+                        )
+                        // A saved copy shows up in the list, not on the original's detail screen.
+                        if (isCopy) backToTab() else back()
+                    },
+                    onDelete = {
+                        if (id != null) viewModel.delete(id)
+                        backToTab()
+                    },
+                )
+            }
+
+            route == Route.SETTINGS -> {
+                // Export / import via the system file picker (F9.3).
+                val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+                    uri?.let(dataViewModel::exportTo)
+                }
+                val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                    uri?.let(dataViewModel::readImport)
+                }
+                val pendingImport by dataViewModel.pendingImport.collectAsStateWithLifecycle()
+                val dataMessages = mapOf(
+                    DataViewModel.Message.EXPORTED to stringResource(R.string.data_exported),
+                    DataViewModel.Message.EXPORT_FAILED to stringResource(R.string.data_export_failed),
+                    DataViewModel.Message.IMPORTED to stringResource(R.string.data_imported),
+                    DataViewModel.Message.IMPORT_FAILED to stringResource(R.string.data_import_failed),
+                    DataViewModel.Message.IMPORT_INVALID to stringResource(R.string.data_import_invalid),
+                    DataViewModel.Message.IMPORT_TOO_LARGE to stringResource(R.string.data_import_too_large),
+                    DataViewModel.Message.DELETED to stringResource(R.string.data_deleted),
+                )
+                LaunchedEffect(dataViewModel) {
+                    dataViewModel.events.collect { snackbarHostState.showSnackbar(dataMessages.getValue(it)) }
+                }
+                SettingsScreen(
+                    settings = appSettings,
+                    access = notificationAccess,
+                    onBack = ::back,
+                    onChange = { change -> settingsViewModel.update { it.copy(reminders = change(it.reminders)) } },
+                    onMotivationChange = { on -> settingsViewModel.update { it.copy(motivationEnabled = on) } },
+                    holiday = homeState.activeHoliday ?: homeState.plannedHoliday,
+                    onOpenHoliday = { open(Route.HOLIDAY) },
+                    onOpenAreas = { open(Route.AREAS) },
+                    onThemeChange = { theme -> settingsViewModel.update { it.copy(theme = theme) } },
+                    onDynamicColorChange = { on -> settingsViewModel.update { it.copy(dynamicColor = on) } },
+                    onFirstDayChange = { day -> settingsViewModel.update { it.copy(firstDayOfWeek = day) } },
+                    onOpenCatalog = { open(Route.CATALOG) },
+                    onExport = { exportLauncher.launch("huushalt-${today}.json") },
+                    onImport = { importLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
+                    onDeleteAll = dataViewModel::deleteAll,
+                    snackbarHostState = snackbarHostState,
+                )
+                pendingImport?.let { backup ->
+                    AlertDialog(
+                        onDismissRequest = dataViewModel::cancelImport,
+                        title = { Text(stringResource(R.string.data_import_title)) },
+                        text = {
+                            Text(
+                                stringResource(
+                                    R.string.data_import_body,
+                                    pluralStringResource(R.plurals.count_chores, backup.chores.size, backup.chores.size),
+                                    pluralStringResource(R.plurals.count_completions, backup.completions.size, backup.completions.size),
+                                ),
+                            )
+                        },
+                        confirmButton = { TextButton(onClick = dataViewModel::confirmImport) { Text(stringResource(R.string.data_import_confirm)) } },
+                        dismissButton = { TextButton(onClick = dataViewModel::cancelImport) { Text(stringResource(R.string.action_cancel)) } },
+                    )
+                }
+            }
+
+            route == Route.CATALOG -> CatalogScreen(
+                existingNames = allChores.map { it.name }.toSet(),
+                onClose = ::back,
+                onAdd = { templates ->
+                    viewModel.addFromTemplates(templates)
                     backToTab()
                 },
             )
-        }
 
-        route == Route.SETTINGS -> {
-            // Export / import via the system file picker (F9.3).
-            val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-                uri?.let(dataViewModel::exportTo)
-            }
-            val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-                uri?.let(dataViewModel::readImport)
-            }
-            val pendingImport by dataViewModel.pendingImport.collectAsStateWithLifecycle()
-            val dataMessages = mapOf(
-                DataViewModel.Message.EXPORTED to stringResource(R.string.data_exported),
-                DataViewModel.Message.EXPORT_FAILED to stringResource(R.string.data_export_failed),
-                DataViewModel.Message.IMPORTED to stringResource(R.string.data_imported),
-                DataViewModel.Message.IMPORT_FAILED to stringResource(R.string.data_import_failed),
-                DataViewModel.Message.IMPORT_INVALID to stringResource(R.string.data_import_invalid),
-                DataViewModel.Message.IMPORT_TOO_LARGE to stringResource(R.string.data_import_too_large),
-                DataViewModel.Message.DELETED to stringResource(R.string.data_deleted),
-            )
-            LaunchedEffect(dataViewModel) {
-                dataViewModel.events.collect { snackbarHostState.showSnackbar(dataMessages.getValue(it)) }
-            }
-            SettingsScreen(
-                settings = appSettings,
-                access = notificationAccess,
+            route == Route.AREAS -> AreasScreen(
+                areas = allAreas,
                 onBack = ::back,
-                onChange = { change -> settingsViewModel.update { it.copy(reminders = change(it.reminders)) } },
-                onMotivationChange = { on -> settingsViewModel.update { it.copy(motivationEnabled = on) } },
-                holiday = homeState.activeHoliday ?: homeState.plannedHoliday,
-                onOpenHoliday = { open(Route.HOLIDAY) },
-                onOpenAreas = { open(Route.AREAS) },
-                onThemeChange = { theme -> settingsViewModel.update { it.copy(theme = theme) } },
-                onDynamicColorChange = { on -> settingsViewModel.update { it.copy(dynamicColor = on) } },
-                onFirstDayChange = { day -> settingsViewModel.update { it.copy(firstDayOfWeek = day) } },
-                onOpenCatalog = { open(Route.CATALOG) },
-                onExport = { exportLauncher.launch("huushalt-${today}.json") },
-                onImport = { importLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
-                onDeleteAll = dataViewModel::deleteAll,
-                snackbarHostState = snackbarHostState,
+                onAdd = viewModel::addArea,
+                onRename = viewModel::renameArea,
+                onDelete = viewModel::deleteArea,
             )
-            pendingImport?.let { backup ->
-                AlertDialog(
-                    onDismissRequest = dataViewModel::cancelImport,
-                    title = { Text(stringResource(R.string.data_import_title)) },
-                    text = {
-                        Text(
-                            stringResource(
-                                R.string.data_import_body,
-                                pluralStringResource(R.plurals.count_chores, backup.chores.size, backup.chores.size),
-                                pluralStringResource(R.plurals.count_completions, backup.completions.size, backup.completions.size),
-                            ),
-                        )
+
+            route == Route.HOLIDAY -> {
+                val holiday = homeState.activeHoliday ?: homeState.plannedHoliday
+                HolidayScreen(
+                    holiday = holiday,
+                    today = today,
+                    onClose = ::back,
+                    onSave = { start, end ->
+                        viewModel.saveHoliday(holiday?.id, start, end)
+                        back()
                     },
-                    confirmButton = { TextButton(onClick = dataViewModel::confirmImport) { Text(stringResource(R.string.data_import_confirm)) } },
-                    dismissButton = { TextButton(onClick = dataViewModel::cancelImport) { Text(stringResource(R.string.action_cancel)) } },
+                    onEnd = {
+                        holiday?.let { viewModel.endHoliday(it.id) }
+                        back()
+                    },
+                    onDelete = {
+                        holiday?.let { viewModel.deleteHoliday(it.id) }
+                        back()
+                    },
                 )
             }
+
+            else -> LaunchedEffect(route) { backToTab() }
         }
+    }
 
-        route == Route.CATALOG -> CatalogScreen(
-            existingNames = allChores.map { it.name }.toSet(),
-            onClose = ::back,
-            onAdd = { templates ->
-                viewModel.addFromTemplates(templates)
-                backToTab()
-            },
-        )
-
-        route == Route.AREAS -> AreasScreen(
-            areas = allAreas,
-            onBack = ::back,
-            onAdd = viewModel::addArea,
-            onRename = viewModel::renameArea,
-            onDelete = viewModel::deleteArea,
-        )
-
-        route == Route.HOLIDAY -> {
-            val holiday = homeState.activeHoliday ?: homeState.plannedHoliday
-            HolidayScreen(
-                holiday = holiday,
-                today = today,
-                onClose = ::back,
-                onSave = { start, end ->
-                    viewModel.saveHoliday(holiday?.id, start, end)
-                    back()
-                },
-                onEnd = {
-                    holiday?.let { viewModel.endHoliday(it.id) }
-                    back()
-                },
-                onDelete = {
-                    holiday?.let { viewModel.deleteHoliday(it.id) }
-                    back()
-                },
-            )
-        }
-
-        else -> LaunchedEffect(route) { backToTab() }
+    // Opening a screen slides it in; going back slides it out. Switching tabs is instant.
+    // Every screen keeps its state (e.g. scroll position) while it is on the back stack.
+    AnimatedContent(
+        targetState = stack.last(),
+        contentKey = { if (it in Route.tabs) "tabs" else it },
+        transitionSpec = {
+            val opened = initialState in stack
+            if (opened) {
+                (slideInHorizontally { it / 3 } + fadeIn(tween(220))) togetherWith fadeOut(tween(120))
+            } else {
+                fadeIn(tween(120)) togetherWith (slideOutHorizontally { it / 3 } + fadeOut(tween(220)))
+            }.apply { targetContentZIndex = if (opened) 1f else -1f }
+        },
+        label = "screen",
+    ) { route ->
+        screenStates.SaveableStateProvider(route) { Screen(route) }
     }
 }
 

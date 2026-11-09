@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -77,23 +78,28 @@ private fun days(count: Int) = pluralStringResource(R.plurals.streak_days, count
 
 @Composable
 private fun StreakCard(streaks: Streaks) {
-    Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+    // A running streak gets the warm accent; without one, the card stays quiet.
+    val active = streaks.current > 0
+    val colors = MaterialTheme.colorScheme
+    Card(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (active) colors.tertiaryContainer else colors.surfaceContainerLow,
+            contentColor = if (active) colors.onTertiaryContainer else colors.onSurface,
+        ),
+    ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(stringResource(R.string.streak_title), style = MaterialTheme.typography.titleSmall)
-            if (streaks.current > 0) {
+            if (active) {
                 Text("🔥 " + days(streaks.current), style = MaterialTheme.typography.headlineMedium)
             } else {
                 // No guilt: a missing streak is an invitation, not a zero (F7).
-                Text(stringResource(R.string.streak_none), style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.streak_none), style = MaterialTheme.typography.bodyLarge)
             }
             if (streaks.best > 0) {
                 Text(stringResource(R.string.streak_best, days(streaks.best)), style = MaterialTheme.typography.bodyMedium)
             }
-            Text(
-                stringResource(R.string.streak_free_day_note),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Text(stringResource(R.string.streak_free_day_note), style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -104,8 +110,8 @@ private fun StatsCards(stats: Stats) {
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        StatCard(stringResource(R.string.stats_this_week), stats.thisWeek.toString(), stringResource(R.string.stats_last_week, stats.lastWeek), Modifier.weight(1f))
-        StatCard(stringResource(R.string.stats_this_month), stats.thisMonth.toString(), stringResource(R.string.stats_last_month, stats.lastMonth), Modifier.weight(1f))
+        StatCard(stringResource(R.string.stats_last_7), stats.last7Days.toString(), stringResource(R.string.stats_previous_7, stats.previous7Days), Modifier.weight(1f))
+        StatCard(stringResource(R.string.stats_last_30), stats.last30Days.toString(), stringResource(R.string.stats_previous_30, stats.previous30Days), Modifier.weight(1f))
         StatCard(
             stringResource(R.string.stats_on_time),
             stats.onTimePercent?.let { stringResource(R.string.stats_on_time_value, it) } ?: stringResource(R.string.stats_no_value),
@@ -117,11 +123,17 @@ private fun StatsCards(stats: Stats) {
 
 @Composable
 private fun StatCard(title: String, value: String, note: String, modifier: Modifier) {
-    Card(modifier) {
+    Card(
+        modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        ),
+    ) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(title, style = MaterialTheme.typography.labelMedium)
             Text(value, style = MaterialTheme.typography.headlineSmall)
-            Text(note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(note, style = MaterialTheme.typography.bodySmall)
         }
     }
 }

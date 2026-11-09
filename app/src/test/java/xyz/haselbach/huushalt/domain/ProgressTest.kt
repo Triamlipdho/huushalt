@@ -119,4 +119,17 @@ class ProgressTest {
         assertEquals(d("2026-11-08"), Progress.stats(completions, today, java.time.DayOfWeek.SUNDAY).weeks.last().weekStart)
         assertEquals(2, Progress.stats(completions, d("2026-11-08")).thisWeek) // Monday start: Sat and Sun in one week
     }
+
+    @Test
+    fun `rolling periods end today`() {
+        val today = d("2026-11-09") // a Monday: the calendar week has just started
+        val completions = listOf("2026-11-09", "2026-11-05", "2026-11-03", "2026-10-30", "2026-10-01").map {
+            CompletionRecord(1, d(it), d(it))
+        }
+        val stats = Progress.stats(completions, today)
+        assertEquals(3, stats.last7Days) // 03.11. to 09.11.
+        assertEquals(1, stats.previous7Days) // 27.10. to 02.11.
+        assertEquals(4, stats.last30Days)
+        assertEquals(1, stats.previous30Days)
+    }
 }
