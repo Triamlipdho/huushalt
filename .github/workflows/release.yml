@@ -91,9 +91,9 @@ jobs:
           HUUSHALT_KEYSTORE_PASSWORD: ${{ secrets.HUUSHALT_KEYSTORE_PASSWORD }}
           HUUSHALT_KEY_ALIAS: ${{ secrets.HUUSHALT_KEY_ALIAS }}
           HUUSHALT_KEY_PASSWORD: ${{ secrets.HUUSHALT_KEY_PASSWORD }}
-        # Same unit tests as CI (debug variant: the migration tests need the Room schemas, which
-        # are only packaged into debug builds), then the signed release APK.
-        run: ./gradlew testDebugUnitTest assembleRelease
+        # Only build and sign: the tests already passed in the pull request's CI, which tests the
+        # merge result. Saves GitHub Actions minutes.
+        run: ./gradlew assembleRelease
 
       - name: Verify signature
         id: apk

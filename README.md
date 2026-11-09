@@ -26,8 +26,25 @@ Requirements: Android Studio (or JDK 21 + Android SDK). JDK 21 is needed for the
 ./gradlew lintDebug testDebugUnitTest
 ```
 
-CI (`.github/workflows/ci.yml`) runs lint, unit tests and debug + release builds on every push and
-pull request. The debug APK is attached to each run as an artifact.
+Before pushing, run the same checks as CI locally (lint, all unit and UI tests, debug build):
+
+```bash
+scripts/check.sh
+```
+
+`scripts/check.sh --release` also builds the (unsigned) release APK.
+
+### GitHub Actions minutes
+
+To keep within the free minutes of a private repository, GitHub only builds what is needed:
+
+- **CI** (`.github/workflows/ci.yml`) runs once per pull request to `main`, not for every push,
+  not for draft pull requests and not for changes to documentation only. It can also be started
+  by hand under *Actions → CI → Run workflow*. Develop and test locally with `scripts/check.sh`.
+- **Release** (`.github/workflows/release.yml`) only builds and signs: the tests already passed in
+  the pull request. The signing key exists only in the GitHub secrets, so signed releases are the
+  one thing that is built on GitHub.
+- **Dependabot** checks for updates once a month.
 
 ## Releases
 
