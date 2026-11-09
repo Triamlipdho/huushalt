@@ -72,6 +72,11 @@ android {
     testOptions {
         // Robolectric UI tests need the app's resources.
         unitTests.isIncludeAndroidResources = true
+        unitTests.all {
+            // Robolectric downloads Android runtime jars during the tests; use the Maven Central
+            // mirror for those too (see settings.gradle.kts).
+            it.systemProperty("robolectric.dependency.repo.url", "https://maven-central.storage-download.googleapis.com/maven2/")
+        }
     }
 
     sourceSets {
