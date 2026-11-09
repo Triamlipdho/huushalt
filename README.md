@@ -14,6 +14,38 @@ It deliberately does one thing, chores, and does it without accounts, flatmates 
 - Gradle with a version catalog (`gradle/libs.versions.toml`); Dependabot keeps versions up to date
 - Package name `xyz.haselbach.huushalt` (debug builds: `xyz.haselbach.huushalt.debug`, so both can be installed side by side)
 
+## Home Assistant: today's chores when you get home
+
+huushalt can show its overview of today's chores (everything due today or overdue) when another app
+on the phone asks for it. The Home Assistant Companion app can do that when you arrive home. No
+network access is needed: Home Assistant tells the Companion app, which passes it on to huushalt on
+the phone.
+
+1. In huushalt, turn on *Einstellungen → Erinnerungen → Auslösen durch andere Apps*. The package
+   name and action shown there are the values for step 2.
+2. In Home Assistant, add an automation (replace `person.me` and `mobile_app_my_phone`):
+
+   ```yaml
+   alias: huushalt – Aufgaben beim Heimkommen
+   triggers:
+     - trigger: state
+       entity_id: person.me
+       to: home
+   actions:
+     - action: notify.mobile_app_my_phone
+       data:
+         message: command_broadcast_intent
+         data:
+           intent_package_name: xyz.haselbach.huushalt
+           intent_action: xyz.haselbach.huushalt.action.SHOW_TODAY
+   ```
+
+   For a debug build, use the package name `xyz.haselbach.huushalt.debug`.
+
+Nothing is shown when no chore is open, during a holiday or when reminders are turned off. The
+notification replaces the morning overview, so it never piles up. To be reminded only once per
+day, add a condition to the automation (for example, only after 16:00).
+
 ## Development
 
 Requirements: Android Studio (or JDK 21 + Android SDK). JDK 21 is needed for the Robolectric UI tests.

@@ -32,6 +32,16 @@
             android:name=".reminders.ReminderReceiver"
             android:exported="false" />
 
+        <!-- Other apps, e.g. Home Assistant, can ask for today's overview (F5.8). Does nothing
+             unless turned on in the settings; the only effect is a local notification. -->
+        <receiver
+            android:name=".reminders.ExternalTriggerReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="xyz.haselbach.huushalt.action.SHOW_TODAY" />
+            </intent-filter>
+        </receiver>
+
         <!-- Only reschedules the reminders, so it is harmless if another app triggers it. -->
         <receiver
             android:name=".reminders.RescheduleReceiver"

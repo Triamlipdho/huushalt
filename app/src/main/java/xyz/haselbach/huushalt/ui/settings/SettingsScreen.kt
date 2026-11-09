@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -37,6 +38,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -46,6 +48,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import xyz.haselbach.huushalt.R
 import xyz.haselbach.huushalt.domain.Holiday
+import xyz.haselbach.huushalt.reminders.ExternalTriggerReceiver
 import xyz.haselbach.huushalt.settings.AppSettings
 import xyz.haselbach.huushalt.settings.ReminderSettings
 import xyz.haselbach.huushalt.settings.ThemeMode
@@ -139,6 +142,32 @@ fun SettingsScreen(
                     )
                 },
             )
+            ListItem(
+                modifier = Modifier.toggleable(
+                    value = reminders.externalTriggerEnabled,
+                    enabled = reminders.enabled,
+                    role = Role.Switch,
+                    onValueChange = { on -> onChange { it.copy(externalTriggerEnabled = on) } },
+                ),
+                headlineContent = { Text(stringResource(R.string.settings_external_trigger)) },
+                supportingContent = { Text(stringResource(R.string.settings_external_trigger_summary)) },
+                trailingContent = {
+                    Switch(checked = reminders.externalTriggerEnabled, enabled = reminders.enabled, onCheckedChange = null)
+                },
+            )
+            if (reminders.enabled && reminders.externalTriggerEnabled) {
+                SelectionContainer {
+                    Text(
+                        stringResource(
+                            R.string.settings_external_trigger_details,
+                            LocalContext.current.packageName,
+                            ExternalTriggerReceiver.ACTION_SHOW_TODAY,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                }
+            }
             Text(
                 stringResource(R.string.settings_timing_note),
                 style = MaterialTheme.typography.bodySmall,

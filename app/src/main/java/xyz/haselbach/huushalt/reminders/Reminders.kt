@@ -30,6 +30,21 @@ class Reminders(
         scheduler.reschedule(reminderSettings, now.plusMinutes(1))
     }
 
+    /**
+     * Another app asked for the overview of today's chores, e.g. Home Assistant when you arrive
+     * home (F5.8). Shows the same notification as the morning overview, with everything that is
+     * overdue or due today. Only when allowed in the settings and not during a holiday.
+     */
+    suspend fun onExternalTrigger(now: ZonedDateTime = ZonedDateTime.now()) {
+        val today = now.toLocalDate()
+        val reminderSettings = settings.current().reminders
+        if (!reminderSettings.enabled || !reminderSettings.externalTriggerEnabled) return
+        chores.applyFinishedHolidays(today)
+        if (chores.holidays.first().any { it.isActive(today) }) return
+        val open = OpenChores.of(chores.chores.first(), today)
+        if (!open.isEmpty) notifier.show(ReminderKind.MORNING, open)
+    }
+
     suspend fun onComplete(choreId: Long, today: LocalDate = LocalDate.now()) {
         chores.complete(choreId, today)
         notifier.cancel()

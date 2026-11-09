@@ -158,6 +158,9 @@
     <string name="settings_evening_summary">Um %s, nur wenn noch etwas offen ist</string>
     <string name="settings_pick_time">Zeit wählen</string>
     <string name="settings_notifications_blocked">Mitteilungen sind für huushalt ausgeschaltet. Ohne sie gibt es keine Erinnerungen.</string>
+    <string name="settings_external_trigger">Auslösen durch andere Apps</string>
+    <string name="settings_external_trigger_summary">Andere Apps wie Home Assistant dürfen die Übersicht von heute anzeigen lassen, z. B. wenn du nach Hause kommst</string>
+    <string name="settings_external_trigger_details">Paket: %1$s\nAktion: %2$s</string>
     <string name="settings_timing_note">Erinnerungen kommen auf ein paar Minuten genau, damit der Akku geschont wird.</string>
 
     <!-- Progress and motivation (F6.3, F7) -->

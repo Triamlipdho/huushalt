@@ -14,12 +14,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
-/** Reminder settings (F5.1, F5.2, F5.7). */
+/** Reminder settings (F5.1, F5.2, F5.7, F5.8). */
 data class ReminderSettings(
     val enabled: Boolean = true,
     val morningTime: LocalTime = LocalTime.of(8, 0),
     val eveningEnabled: Boolean = true,
     val eveningTime: LocalTime = LocalTime.of(19, 0),
+    /** Other apps, e.g. Home Assistant, may ask for the overview of today's chores (F5.8). Opt-in. */
+    val externalTriggerEnabled: Boolean = false,
 )
 
 data class AppSettings(
@@ -55,6 +57,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             prefs[MORNING_MINUTE] = new.reminders.morningTime.toMinuteOfDay()
             prefs[EVENING_ENABLED] = new.reminders.eveningEnabled
             prefs[EVENING_MINUTE] = new.reminders.eveningTime.toMinuteOfDay()
+            prefs[EXTERNAL_TRIGGER_ENABLED] = new.reminders.externalTriggerEnabled
             prefs[PERMISSION_CARD_DISMISSED] = new.permissionCardDismissed
             prefs[PERMISSION_REQUESTED] = new.permissionRequested
             prefs[MOTIVATION_ENABLED] = new.motivationEnabled
@@ -68,6 +71,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val MORNING_MINUTE = intPreferencesKey("reminders_morning_minute")
         val EVENING_ENABLED = booleanPreferencesKey("reminders_evening_enabled")
         val EVENING_MINUTE = intPreferencesKey("reminders_evening_minute")
+        val EXTERNAL_TRIGGER_ENABLED = booleanPreferencesKey("reminders_external_trigger_enabled")
         val PERMISSION_CARD_DISMISSED = booleanPreferencesKey("permission_card_dismissed")
         val PERMISSION_REQUESTED = booleanPreferencesKey("permission_requested")
         val MOTIVATION_ENABLED = booleanPreferencesKey("motivation_enabled")
@@ -82,6 +86,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
                     morningTime = this[MORNING_MINUTE]?.toLocalTime() ?: defaults.morningTime,
                     eveningEnabled = this[EVENING_ENABLED] ?: defaults.eveningEnabled,
                     eveningTime = this[EVENING_MINUTE]?.toLocalTime() ?: defaults.eveningTime,
+                    externalTriggerEnabled = this[EXTERNAL_TRIGGER_ENABLED] ?: defaults.externalTriggerEnabled,
                 ),
                 permissionCardDismissed = this[PERMISSION_CARD_DISMISSED] ?: false,
                 permissionRequested = this[PERMISSION_REQUESTED] ?: false,
