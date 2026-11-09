@@ -31,6 +31,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
@@ -143,16 +149,30 @@ fun ChoreRow(
         return
     }
     // Swipe right: done; swipe left: tomorrow. The row snaps back, the list then updates.
+    // The state keeps its callback for as long as the row is shown, so it must read the current
+    // actions (the chore or "today" may have changed since), and act only once per swipe: the
+    // callback can be asked more than once at the end of a gesture.
+    val currentComplete by rememberUpdatedState(complete)
+    val currentPostpone by rememberUpdatedState(onPostpone)
+    var handled by remember { mutableStateOf(false) }
     val state = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
-            when (value) {
-                SwipeToDismissBoxValue.StartToEnd -> complete()
-                SwipeToDismissBoxValue.EndToStart -> onPostpone?.invoke()
-                SwipeToDismissBoxValue.Settled -> Unit
+            if (value == SwipeToDismissBoxValue.Settled) {
+                handled = false
+            } else if (!handled) {
+                handled = true
+                when (value) {
+                    SwipeToDismissBoxValue.StartToEnd -> currentComplete()
+                    else -> currentPostpone?.invoke()
+                }
             }
             false
         },
     )
+    // Ready for the next swipe once the row is back in place.
+    LaunchedEffect(state.currentValue, state.dismissDirection) {
+        if (state.dismissDirection == SwipeToDismissBoxValue.Settled) handled = false
+    }
     SwipeToDismissBox(
         state = state,
         modifier = modifier,

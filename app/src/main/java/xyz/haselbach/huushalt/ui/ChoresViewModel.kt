@@ -1,5 +1,6 @@
 package xyz.haselbach.huushalt.ui
 
+import android.database.sqlite.SQLiteException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
@@ -25,7 +26,7 @@ import kotlinx.coroutines.launch
 import xyz.haselbach.huushalt.HuushaltApplication
 import xyz.haselbach.huushalt.data.ChecklistDraft
 import xyz.haselbach.huushalt.data.ChoreRepository
-import xyz.haselbach.huushalt.data.ChoreSnapshot
+import xyz.haselbach.huushalt.data.UndoToken
 import xyz.haselbach.huushalt.data.CompletionEntity
 import xyz.haselbach.huushalt.data.CompletionWithName
 import xyz.haselbach.huushalt.data.toRecord
@@ -83,11 +84,20 @@ sealed interface UiEvent {
     /** [allDoneToday]: this was the last open chore of the day, time to celebrate (F7.5). */
     data class Completed(val choreName: String, val completionId: Long, val allDoneToday: Boolean) : UiEvent
 
-    /** A change that can be undone by restoring [snapshot]; shown as a snackbar with "Rückgängig". */
-    data class Changed(val kind: ChangeKind, val snapshot: ChoreSnapshot, val date: LocalDate? = null) : UiEvent {
-        val choreName: String get() = snapshot.chores.firstOrNull()?.name.orEmpty()
-        val count: Int get() = snapshot.chores.size
+    /** A change that can be undone with [token]; shown as a snackbar with "Rückgängig". */
+    data class Changed(
+        val kind: ChangeKind,
+        val token: UndoToken,
+        val date: LocalDate? = null,
+        /** Undo is only possible while no import or "delete all" happened since. */
+        val generation: Int = 0,
+    ) : UiEvent {
+        val choreName: String get() = token.before.chores.firstOrNull()?.name.orEmpty()
+        val count: Int get() = token.before.chores.size
     }
+
+    /** The chore was changed again after the change, so undoing it would lose that. */
+    data object UndoNotPossible : UiEvent
 }
 
 enum class ChangeKind { SKIPPED, POSTPONED, PAUSED, RESUMED, DELETED, COMPLETION_DELETED, COMPLETION_MOVED, RESCHEDULED, REOPENED }
@@ -186,9 +196,8 @@ class ChoresViewModel(
     /** "Neu planen ab heute" (F10.6). */
     fun rescheduleOverdue() {
         viewModelScope.launch {
-            val snapshot = repository.snapshotOverdue()
-            repository.rescheduleOverdue()
-            if (snapshot.chores.isNotEmpty()) events.send(UiEvent.Changed(ChangeKind.RESCHEDULED, snapshot))
+            val token = repository.rescheduleOverdueUndoably()
+            if (token.before.chores.isNotEmpty()) events.send(UiEvent.Changed(ChangeKind.RESCHEDULED, token, generation = generation))
         }
     }
 
@@ -263,17 +272,32 @@ class ChoresViewModel(
     fun reopen(choreId: Long, completionId: Long) =
         undoable(ChangeKind.REOPENED, choreId) { repository.deleteCompletion(completionId) }
 
-    /** Undoes a [UiEvent.Changed]. */
-    fun undo(snapshot: ChoreSnapshot) {
-        viewModelScope.launch { repository.restore(snapshot) }
+    /** Counts imports and "delete all"; undo from before one of them is dropped. */
+    private var generation = 0
+
+    /** All data was replaced (import, delete all): pending undos no longer apply. */
+    fun forgetUndo() {
+        generation++
+    }
+
+    /** Undoes a [UiEvent.Changed], unless the chores were changed again since. */
+    fun undo(event: UiEvent.Changed) {
+        viewModelScope.launch {
+            val undone = event.generation == generation &&
+                try {
+                    repository.undo(event.token)
+                } catch (e: SQLiteException) {
+                    false
+                }
+            if (!undone) events.send(UiEvent.UndoNotPossible)
+        }
     }
 
     /** Runs [change] and offers to undo it, by restoring the chore as it was before. */
     private fun undoable(kind: ChangeKind, choreId: Long, date: LocalDate? = null, change: suspend () -> Unit) {
         viewModelScope.launch {
-            val snapshot = repository.snapshot(listOf(choreId))
-            change()
-            events.send(UiEvent.Changed(kind, snapshot, date))
+            val token = repository.changeUndoably(choreId, change)
+            events.send(UiEvent.Changed(kind, token, date, generation))
         }
     }
 

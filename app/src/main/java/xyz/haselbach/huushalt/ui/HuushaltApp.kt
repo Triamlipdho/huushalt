@@ -132,7 +132,11 @@ fun HuushaltApp(
     )
 
     val screenStates = rememberSaveableStateHolder()
-    fun open(route: String) = stack.add(route)
+    // Each opened screen gets its own entry ("detail:5@12"), so opening the same screen again
+    // never reuses an old one, e.g. one still animating out.
+    var openCount by rememberSaveable { mutableIntStateOf(0) }
+    fun entry(route: String) = if (route in Route.tabs) route else "$route@${++openCount}"
+    fun open(route: String) = stack.add(entry(route))
     fun back() {
         if (stack.size > 1) screenStates.removeState(stack.removeAt(stack.lastIndex))
     }
@@ -149,13 +153,13 @@ fun HuushaltApp(
     // suggestions (F9.7).
     LaunchedEffect(navRequest) {
         val target = navRequest?.target ?: return@LaunchedEffect
-        stack.forEach(screenStates::removeState)
+        stack.filter { it !in Route.tabs }.forEach(screenStates::removeState)
         stack.clear()
         stack.add(Route.TODAY)
         when (target) {
             NavTarget.TODAY -> Unit
-            NavTarget.NEW_CHORE -> stack.add(Route.edit(null))
-            NavTarget.CATALOG -> stack.add(Route.CATALOG)
+            NavTarget.NEW_CHORE -> open(Route.edit(null))
+            NavTarget.CATALOG -> open(Route.CATALOG)
         }
     }
 
@@ -166,6 +170,7 @@ fun HuushaltApp(
     val allDoneText = stringResource(R.string.celebration_all_done)
     val motivationEnabled = settings?.motivationEnabled ?: true
     val undoText = stringResource(R.string.action_undo)
+    val undoNotPossibleText = stringResource(R.string.undo_not_possible)
     LaunchedEffect(viewModel, motivationEnabled) {
         viewModel.uiEvents.collect { event ->
             when (event) {
@@ -190,8 +195,12 @@ fun HuushaltApp(
                             actionLabel = undoText,
                             duration = SnackbarDuration.Long,
                         )
-                        if (result == SnackbarResult.ActionPerformed) viewModel.undo(event.snapshot)
+                        if (result == SnackbarResult.ActionPerformed) viewModel.undo(event)
                     }
+                }
+                UiEvent.UndoNotPossible -> {
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                    launch { snackbarHostState.showSnackbar(undoNotPossibleText) }
                 }
             }
         }
@@ -228,7 +237,8 @@ fun HuushaltApp(
     }
     /** One screen of the back stack. */
     @Composable
-    fun Screen(route: String) {
+    fun Screen(entry: String) {
+        val route = entry.substringBefore('@')
         when {
             route in Route.tabs -> MainScaffold(
                 tab = route,
@@ -295,7 +305,7 @@ fun HuushaltApp(
                 if (chore == null) {
                     // Deleted in the meantime.
                     // Only the screen on top reacts; one still animating out must not.
-                    if (route == stack.last()) LaunchedEffect(route) { back() }
+                    if (entry == stack.last()) LaunchedEffect(entry) { back() }
                     return
                 }
                 val completions by remember(id) { viewModel.completions(id) }.collectAsStateWithLifecycle(emptyList())
@@ -331,7 +341,7 @@ fun HuushaltApp(
                 val source = sourceId?.let { choreId -> allChores.find { it.id == choreId } }
                 if (sourceId != null && source == null) {
                     // Only the screen on top reacts; one still animating out must not.
-                    if (route == stack.last()) LaunchedEffect(route) { back() }
+                    if (entry == stack.last()) LaunchedEffect(entry) { back() }
                     return
                 }
                 // Editing keeps the id; a copy (F1.10) is saved as a new chore.
@@ -394,7 +404,14 @@ fun HuushaltApp(
                     DataViewModel.Message.DELETED to stringResource(R.string.data_deleted),
                 )
                 LaunchedEffect(dataViewModel) {
-                    dataViewModel.events.collect { snackbarHostState.showSnackbar(dataMessages.getValue(it)) }
+                    dataViewModel.events.collect {
+                    // All data was replaced: an undo offered before must not touch it any more.
+                    if (it == DataViewModel.Message.IMPORTED || it == DataViewModel.Message.DELETED) {
+                        viewModel.forgetUndo()
+                        snackbarHostState.currentSnackbarData?.dismiss()
+                    }
+                    snackbarHostState.showSnackbar(dataMessages.getValue(it))
+                }
                 }
                 SettingsScreen(
                     settings = appSettings,
@@ -489,8 +506,8 @@ fun HuushaltApp(
             }.apply { targetContentZIndex = if (opened) 1f else -1f }
         },
         label = "screen",
-    ) { route ->
-        screenStates.SaveableStateProvider(route) { Screen(route) }
+    ) { entry ->
+        screenStates.SaveableStateProvider(entry) { Screen(entry) }
     }
 }
 

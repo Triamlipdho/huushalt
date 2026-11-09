@@ -283,35 +283,53 @@ class ChoreRepository(
 
     suspend fun delete(choreId: Long) = dao.deleteChore(choreId)
 
-    /** Everything stored about these chores right now, for [restore]. */
-    suspend fun snapshot(choreIds: List<Long>): ChoreSnapshot = db.withTransaction {
-        ChoreSnapshot(
-            chores = backupDao.choresById(choreIds),
-            dates = backupDao.datesOf(choreIds),
-            checklist = backupDao.checklistOf(choreIds),
-            completions = backupDao.completionsOf(choreIds),
-            missedPeriods = backupDao.missedPeriodsOf(choreIds),
-        )
-    }
-
-    /** Snapshot of the chores that are overdue today, taken before "Neu planen" for undo. */
-    suspend fun snapshotOverdue(today: LocalDate = LocalDate.now()): ChoreSnapshot =
-        snapshot(dao.getChores().map { it.toDomain() }.filter { it.status(today) is DueStatus.Overdue }.map { it.id })
+    /** Everything stored about these chores right now. */
+    private suspend fun snapshot(choreIds: List<Long>): ChoreSnapshot = ChoreSnapshot(
+        chores = backupDao.choresById(choreIds).sortedBy { it.id },
+        dates = backupDao.datesOf(choreIds).sortedBy { it.id },
+        checklist = backupDao.checklistOf(choreIds).sortedBy { it.id },
+        completions = backupDao.completionsOf(choreIds).sortedBy { it.id },
+        missedPeriods = backupDao.missedPeriodsOf(choreIds).sortedBy { it.id },
+    )
 
     /**
-     * Puts the chores back exactly as they were in [snapshot] (undo). Chores deleted since are
-     * created again with their ids; a room deleted in the meantime is left out.
+     * Runs [change] on the chores [choreIds] picks, in one transaction with a snapshot before and
+     * after, so the change can be undone with [undo].
      */
-    suspend fun restore(snapshot: ChoreSnapshot) = db.withTransaction {
-        if (snapshot.chores.isEmpty()) return@withTransaction
+    suspend fun changeUndoably(choreIds: suspend () -> List<Long>, change: suspend () -> Unit): UndoToken =
+        db.withTransaction {
+            val ids = choreIds()
+            val before = snapshot(ids)
+            change()
+            UndoToken(ids, before, snapshot(ids))
+        }
+
+    suspend fun changeUndoably(choreId: Long, change: suspend () -> Unit): UndoToken =
+        changeUndoably({ listOf(choreId) }, change)
+
+    /** "Neu planen ab heute" (F10.6) that can be undone. */
+    suspend fun rescheduleOverdueUndoably(today: LocalDate = LocalDate.now()): UndoToken = changeUndoably(
+        choreIds = { dao.getChores().map { it.toDomain() }.filter { it.status(today) is DueStatus.Overdue }.map { it.id } },
+        change = { rescheduleOverdue(today) },
+    )
+
+    /**
+     * Undoes a change: puts the chores back exactly as they were before it. Chores deleted by it
+     * are created again with their ids; a room deleted in the meantime is left out. Returns false,
+     * and changes nothing, when the chores were changed again since.
+     */
+    suspend fun undo(token: UndoToken): Boolean = db.withTransaction {
+        if (snapshot(token.choreIds) != token.after) return@withTransaction false
+        val before = token.before
         val areas = backupDao.areaIds().toSet()
         // Deleting cascades to dates, checklist, completions and missed periods.
-        backupDao.deleteChoresById(snapshot.choreIds)
-        backupDao.insertChores(snapshot.chores.map { if (it.areaId != null && it.areaId !in areas) it.copy(areaId = null) else it })
-        backupDao.insertDates(snapshot.dates)
-        backupDao.insertChecklist(snapshot.checklist)
-        backupDao.insertCompletions(snapshot.completions)
-        backupDao.insertMissedPeriods(snapshot.missedPeriods)
+        backupDao.deleteChoresById(token.choreIds)
+        backupDao.insertChores(before.chores.map { if (it.areaId != null && it.areaId !in areas) it.copy(areaId = null) else it })
+        backupDao.insertDates(before.dates)
+        backupDao.insertChecklist(before.checklist)
+        backupDao.insertCompletions(before.completions)
+        backupDao.insertMissedPeriods(before.missedPeriods)
+        true
     }
 
     /** Drops fields that don't apply to the schedule, so stored data stays consistent. */
