@@ -96,7 +96,8 @@ Still to do in the settings:
 1. *Settings → Actions → General*
    - **Actions permissions:** keep *Allow all actions and reusable workflows*, or choose *Allow
      Triamlipdho, and select non-Triamlipdho, actions and reusable workflows* and allow
-     `actions/*`, `gradle/actions/*`.
+     `actions/*`, `gradle/actions/*`, `github/codeql-action/*`. An action missing from this list
+     makes its workflow fail immediately with *startup failure*.
    - **Approval for running fork pull request workflows from contributors** (shown once the
      repository is public): *Require approval for all external contributors*. While the
      repository was private, the separate section *Fork pull request workflows in private
