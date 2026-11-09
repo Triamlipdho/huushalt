@@ -5,6 +5,20 @@ publishing (branch `claude/prepare-public`). Work through it **in order**. Items
 **✅ done in the PR** need no action beyond merging; everything else is a setting or a decision
 only the owner can make.
 
+## Status
+
+| Step | Status |
+|---|---|
+| 1. License | ✅ GPL-3.0 (`LICENSE`, mentioned in the README) |
+| 2. Personal data | ✅ Package name with surname accepted; commit emails are noreply |
+| 3. Merged branches | ✅ Deleted |
+| 4. Actions settings | ✅ Set. Fork pull requests: *Require approval for all external contributors* |
+| 5. Ruleset for `main` | ✅ Added; CI now also runs for documentation-only pull requests |
+| 6. Code security | ✅ Enabled |
+| 7. Visibility | ✅ Public |
+| 8. Obtainium | ✅ Token removed. Still to do: revoke the token on GitHub |
+| 9. Verify a release | Open: next release after this change |
+
 ## Audit summary (2026-11-09)
 
 Checked: all 44 commits on all 5 branches and 12 tags (`v0.1.0` to `v1.3.1`), every blob that
@@ -83,8 +97,11 @@ Still to do in the settings:
    - **Actions permissions:** keep *Allow all actions and reusable workflows*, or choose *Allow
      Triamlipdho, and select non-Triamlipdho, actions and reusable workflows* and allow
      `actions/*`, `gradle/actions/*`.
-   - **Fork pull request workflows from outside collaborators:** *Require approval for all
-     outside collaborators*.
+   - **Approval for running fork pull request workflows from contributors** (shown once the
+     repository is public): *Require approval for all external contributors*. While the
+     repository was private, the separate section *Fork pull request workflows in private
+     repositories* applies instead; leave *Run workflows from fork pull requests* unchecked
+     there.
    - **Workflow permissions:** *Read repository contents and packages permissions* (read-only
      default), and leave *Allow GitHub Actions to create and approve pull requests* unchecked.
      The release job requests `contents: write` itself, so releases keep working.
@@ -102,11 +119,9 @@ Still to do in the settings:
 - Check **Restrict deletions**, **Block force pushes**.
 - Check **Require a pull request before merging** (required approvals 0 is fine for a
   one-person project).
-- Check **Require status checks to pass**, add the check **`build`** (the CI job). Note: CI
-  skips documentation-only pull requests (`paths-ignore`), so such pull requests would wait
-  forever for `build`. Either merge those via the bypass, or start CI by hand
-  (*Actions → CI → Run workflow* doesn't report to the PR), or remove `paths-ignore` from
-  `ci.yml` (costs nothing on a public repository, see step 7).
+- Check **Require status checks to pass**, add the check **`build`** (the CI job). CI used to
+  skip documentation-only pull requests (`paths-ignore`), so those would have waited forever for
+  `build`; **✅ `paths-ignore` was removed** after going public, where Actions minutes are free.
 
 Optionally a tag ruleset (*New tag ruleset*, target `v*`, *Restrict creations*, *Restrict
 updates*, *Restrict deletions*, yourself in the bypass list) so that only you can create
