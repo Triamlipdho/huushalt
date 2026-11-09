@@ -124,7 +124,7 @@ Single tasks:
 GitHub only builds what is needed:
 
 - **CI** (`.github/workflows/ci.yml`) runs once per pull request to `main`, not for every push,
-  not for draft pull requests and not for changes to documentation only. It can also be started
+  not for draft pull requests. It is required for merging into `main`. It can also be started
   by hand under *Actions → CI → Run workflow*. Develop and test locally with `scripts/check.sh`.
   Pull requests from forks run with a read-only token and without access to any secrets.
 - **Release** (`.github/workflows/release.yml`) only builds and signs: the tests already passed in
@@ -191,3 +191,9 @@ git push origin v0.1.0
    (minor and patch must stay below 100; versions must always increase),
 2. builds and signs the release APK and checks the signature,
 3. creates the GitHub release `v1.2.3` with `huushalt-1.2.3.apk` and generated release notes.
+
+## License
+
+huushalt is free software under the [GNU General Public License v3.0](LICENSE): you may use,
+study, change and share it, and builds or forks you distribute must be under the GPL-3.0 as
+well, with their source code.
