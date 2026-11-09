@@ -8,10 +8,22 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.InsertChart
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Today
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -218,6 +230,7 @@ fun HuushaltApp(
             },
             onAdd = { open(Route.edit(null)) },
             onSettings = { open(Route.SETTINGS) },
+            subtitle = if (route == Route.TODAY) today.formatLong() else null,
         ) { padding ->
             if (route == Route.TODAY) {
                 val showPermissionCard = appSettings.reminders.enabled &&
@@ -237,6 +250,7 @@ fun HuushaltApp(
                     onEditChore = { open(Route.edit(it.id)) },
                     onOpenCatalog = { open(Route.CATALOG) },
                     onReopen = { viewModel.reopen(it.chore.id, it.completionId) },
+                    onPostponeToTomorrow = { viewModel.postpone(it.id, today.plusDays(1)) },
                     header = {
                         if (showPermissionCard) {
                             PermissionCard(
@@ -294,6 +308,10 @@ fun HuushaltApp(
                 onCompleteOn = { date -> viewModel.complete(chore, date) },
                 onSkip = { viewModel.skip(id) },
                 onDuplicate = { open(Route.copy(id)) },
+                onDelete = {
+                    viewModel.delete(id)
+                    backToTab()
+                },
             )
         }
 
@@ -377,6 +395,7 @@ fun HuushaltApp(
                 onOpenHoliday = { open(Route.HOLIDAY) },
                 onOpenAreas = { open(Route.AREAS) },
                 onThemeChange = { theme -> settingsViewModel.update { it.copy(theme = theme) } },
+                onDynamicColorChange = { on -> settingsViewModel.update { it.copy(dynamicColor = on) } },
                 onFirstDayChange = { day -> settingsViewModel.update { it.copy(firstDayOfWeek = day) } },
                 onOpenCatalog = { open(Route.CATALOG) },
                 onExport = { exportLauncher.launch("huushalt-${today}.json") },
@@ -466,9 +485,24 @@ private fun MainScaffold(
     onSelectTab: (String) -> Unit,
     onAdd: () -> Unit,
     onSettings: () -> Unit,
+    /** Second line of the title, e.g. today's date. */
+    subtitle: String? = null,
     content: @Composable (PaddingValues) -> Unit,
 ) {
+    // The "+" button moves out of the way while scrolling down and comes back when scrolling up.
+    var fabVisible by rememberSaveable { mutableStateOf(true) }
+    val scrollWatcher = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (available.y < -1f) fabVisible = false
+                if (available.y > 1f) fabVisible = true
+                return Offset.Zero
+            }
+        }
+    }
+    LaunchedEffect(tab) { fabVisible = true }
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollWatcher),
         topBar = {
             TopAppBar(
                 title = {
@@ -477,7 +511,16 @@ private fun MainScaffold(
                         Route.ALL -> R.string.nav_all
                         else -> R.string.nav_progress
                     }
-                    Text(stringResource(title))
+                    Column {
+                        Text(stringResource(title))
+                        if (subtitle != null) {
+                            Text(
+                                subtitle,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                 },
                 actions = {
                     IconButton(onClick = onSettings) {
@@ -491,7 +534,7 @@ private fun MainScaffold(
                 NavigationBarItem(
                     selected = tab == Route.TODAY,
                     onClick = { onSelectTab(Route.TODAY) },
-                    icon = { Icon(Icons.Filled.Home, contentDescription = null) },
+                    icon = { Icon(Icons.Filled.Today, contentDescription = null) },
                     label = { Text(stringResource(R.string.nav_today)) },
                 )
                 NavigationBarItem(
@@ -503,14 +546,22 @@ private fun MainScaffold(
                 NavigationBarItem(
                     selected = tab == Route.PROGRESS,
                     onClick = { onSelectTab(Route.PROGRESS) },
-                    icon = { Icon(Icons.Filled.Star, contentDescription = null) },
+                    icon = { Icon(Icons.Filled.InsertChart, contentDescription = null) },
                     label = { Text(stringResource(R.string.nav_progress)) },
                 )
             }
         },
         floatingActionButton = {
-            if (tab != Route.PROGRESS) {
-                FloatingActionButton(onClick = onAdd) {
+            AnimatedVisibility(
+                visible = tab != Route.PROGRESS && fabVisible,
+                enter = scaleIn() + fadeIn(),
+                exit = scaleOut() + fadeOut(),
+            ) {
+                FloatingActionButton(
+                    onClick = onAdd,
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                ) {
                     Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.action_add))
                 }
             }

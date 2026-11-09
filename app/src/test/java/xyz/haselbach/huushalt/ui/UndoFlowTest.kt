@@ -98,5 +98,20 @@ class UndoFlowTest {
         compose.waitUntilDoesNotExist(hasText("Heute erledigt", substring = true), timeoutMillis = 5_000)
     }
 
+    @Test
+    fun deletingFromTheMenuCanBeUndone() {
+        waitFor("Noch keine Aufgaben")
+        createChore("Staubsaugen")
+        compose.onNodeWithText("Staubsaugen").performClick()
+        compose.onNodeWithContentDescription("Weitere Aktionen").performClick()
+        compose.onNodeWithText("Löschen").performClick()
+        waitFor("«Staubsaugen» löschen?")
+        compose.onNodeWithText("Löschen").performClick()
+        waitFor("«Staubsaugen» gelöscht")
+        compose.onNodeWithText("Rückgängig").performClick()
+        waitFor("Heute fällig")
+        compose.onNodeWithText("Staubsaugen").assertExists()
+    }
+
     private fun screenshot(name: String) = compose.screenshot("undo-$name")
 }

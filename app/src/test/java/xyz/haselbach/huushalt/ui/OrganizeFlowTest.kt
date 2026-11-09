@@ -57,7 +57,7 @@ class OrganizeFlowTest {
     fun checklistAsksBeforeCompletingAndResets() {
         waitFor("Noch keine Aufgaben")
         createChore("Bad putzen", room = "Bad", checklist = listOf("Lavabo", "WC"))
-        waitFor("Bad · 0/2")
+        waitFor("Bad\u00A0· 0/2")
 
         compose.onNodeWithText("Bad putzen").performClick()
         waitFor("Checkliste 0/2")
@@ -90,6 +90,7 @@ class OrganizeFlowTest {
 
         // Pause (F1.3): gone from Heute, listed as paused in Alle Aufgaben.
         compose.onNodeWithText("Staubsaugen").performClick()
+        compose.onNodeWithContentDescription("Weitere Aktionen").performClick()
         compose.onNodeWithText("Pausieren").performClick()
         waitFor("Fortsetzen")
         compose.onNodeWithContentDescription("Zurück").performClick()

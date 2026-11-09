@@ -34,6 +34,8 @@ data class AppSettings(
     val motivationEnabled: Boolean = true,
     /** Light, dark or as the system (F9.4). */
     val theme: ThemeMode = ThemeMode.SYSTEM,
+    /** Colours taken from the wallpaper (Android 12+) instead of huushalt's own green. */
+    val dynamicColor: Boolean = false,
     /** Start of the week for statistics and weekday lists (F9.4). */
     val firstDayOfWeek: DayOfWeek = DayOfWeek.MONDAY,
 )
@@ -62,6 +64,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             prefs[PERMISSION_REQUESTED] = new.permissionRequested
             prefs[MOTIVATION_ENABLED] = new.motivationEnabled
             prefs[THEME] = new.theme.name
+            prefs[DYNAMIC_COLOR] = new.dynamicColor
             prefs[FIRST_DAY_OF_WEEK] = new.firstDayOfWeek.value
         }
     }
@@ -76,6 +79,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val PERMISSION_REQUESTED = booleanPreferencesKey("permission_requested")
         val MOTIVATION_ENABLED = booleanPreferencesKey("motivation_enabled")
         val THEME = stringPreferencesKey("theme")
+        val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val FIRST_DAY_OF_WEEK = intPreferencesKey("first_day_of_week")
 
         fun Preferences.toSettings(): AppSettings {
@@ -92,6 +96,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
                 permissionRequested = this[PERMISSION_REQUESTED] ?: false,
                 motivationEnabled = this[MOTIVATION_ENABLED] ?: true,
                 theme = this[THEME]?.let { name -> ThemeMode.entries.find { it.name == name } } ?: ThemeMode.SYSTEM,
+                dynamicColor = this[DYNAMIC_COLOR] ?: false,
                 firstDayOfWeek = this[FIRST_DAY_OF_WEEK]?.let { DayOfWeek.of(it) } ?: DayOfWeek.MONDAY,
             )
         }

@@ -431,4 +431,19 @@
     <string name="home_section_done_hide">Erledigte ausblenden</string>
     <string name="action_reopen_description">«%s» wieder als offen markieren</string>
     <string name="done_today">Erledigt</string>
+    <string name="settings_dynamic_color">Farben vom Hintergrundbild</string>
+    <string name="settings_dynamic_color_summary">Statt dem Grün von huushalt die Farben deines Hintergrundbilds verwenden</string>
+    <string name="action_postpone_tomorrow_description">«%s» auf morgen verschieben</string>
+    <string name="action_more">Weitere Aktionen</string>
+    <string name="history_on_time">Pünktlich</string>
+    <plurals name="history_late">
+        <item quantity="one">%d Tag zu spät</item>
+        <item quantity="other">%d Tage zu spät</item>
+    </plurals>
+    <plurals name="history_gap">
+        <item quantity="one">%d Tag nach dem letzten Mal</item>
+        <item quantity="other">%d Tage nach dem letzten Mal</item>
+    </plurals>
+    <string name="edit_summary_next">Fällig am %s</string>
+    <string name="edit_delete">Aufgabe löschen</string>
 </resources>

@@ -16,20 +16,27 @@ import xyz.haselbach.huushalt.ui.components.ChoreAvatar
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.material.icons.filled.BeachAccess
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -54,7 +61,6 @@ import xyz.haselbach.huushalt.ui.components.EmptyState
 import xyz.haselbach.huushalt.ui.components.SectionHeader
 import xyz.haselbach.huushalt.ui.components.SectionHeaderWithAction
 import xyz.haselbach.huushalt.ui.components.withFabSpace
-import xyz.haselbach.huushalt.ui.formatLong
 import xyz.haselbach.huushalt.ui.formatShort
 
 /** Daily overview: overdue, today and the next 7 days (F3.1 to F3.3), with today's progress (F7.1). */
@@ -75,6 +81,8 @@ fun HomeScreen(
     onOpenCatalog: () -> Unit = {},
     /** Takes back a completion from today. */
     onReopen: (DoneToday) -> Unit = {},
+    /** Swipe left on a due chore: tomorrow. */
+    onPostponeToTomorrow: (Chore) -> Unit = {},
 ) {
     var confirmReschedule by rememberSaveable { mutableStateOf(false) }
     // Filter the lists by room (F3.5); null shows all.
@@ -96,7 +104,12 @@ fun HomeScreen(
         items(state.datesRunningOut, key = { "dates-${it.id}" }) { chore ->
             DatesRunningOutCard(chore, state.today, onClick = { onEditChore(chore) })
         }
-        item(key = "progress") { Progress(state, streak) }
+        if (state.total > 0 || (streak != null && streak >= 2)) {
+            item(key = "progress") { Progress(state, streak) }
+        }
+        state.plannedHoliday?.let { planned ->
+            item(key = "planned-holiday") { PlannedHolidayChip(planned, onClick = onChangeHoliday) }
+        }
         if (areas.isNotEmpty() && state.hasChores) {
             item(key = "areas") {
                 AreaFilter(areas, areaFilter, onSelect = { areaFilter = it })
@@ -123,8 +136,17 @@ fun HomeScreen(
             onOpen,
             onComplete,
             action = rescheduleLabel to { confirmReschedule = true },
+            onPostpone = onPostponeToTomorrow,
         )
-        section(R.string.home_section_today, filter(state.dueToday), state.today, onOpen, onComplete, showDueToday = false)
+        section(
+            R.string.home_section_today,
+            filter(state.dueToday),
+            state.today,
+            onOpen,
+            onComplete,
+            showDueToday = false,
+            onPostpone = onPostponeToTomorrow,
+        )
         section(R.string.home_section_upcoming, filter(state.upcoming), state.today, onOpen, onComplete)
         // What was done today stays visible, and can be taken back (folded away by default).
         val done = state.doneTodayList.filter { item -> areaFilter == null || item.chore.areaId == areaFilter }
@@ -158,15 +180,15 @@ fun HomeScreen(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AreaFilter(areas: List<Area>, selected: Long?, onSelect: (Long?) -> Unit) {
-    FlowRow(
-        modifier = Modifier.padding(horizontal = 16.dp),
+    // One scrollable line, however many rooms there are.
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        FilterChip(selected = selected == null, onClick = { onSelect(null) }, label = { Text(stringResource(R.string.filter_all)) })
-        areas.forEach { area ->
+        item { FilterChip(selected = selected == null, onClick = { onSelect(null) }, label = { Text(stringResource(R.string.filter_all)) }) }
+        items(areas, key = { it.id }) { area ->
             FilterChip(selected = selected == area.id, onClick = { onSelect(area.id) }, label = { Text(area.name) })
         }
     }
@@ -204,35 +226,72 @@ private fun HolidayCard(holiday: Holiday, onEnd: () -> Unit, onChange: () -> Uni
     }
 }
 
-/** Summary at the top of Heute: date, progress (F7.1), streak (F7.2) and a planned holiday. */
+/** Today's progress as a ring (F7.1) and the streak (F7.2). The date is in the title bar. */
 @Composable
 private fun Progress(state: HomeState, streak: Int?) {
-    Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(state.today.formatLong(), style = MaterialTheme.typography.titleMedium)
+    val colors = MaterialTheme.colorScheme
+    Card(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = colors.primaryContainer, contentColor = colors.onPrimaryContainer),
+    ) {
+        Row(
+            Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             if (state.total > 0) {
-                Text(stringResource(R.string.home_progress, state.doneToday, state.total), style = MaterialTheme.typography.bodyLarge)
                 val progress by animateFloatAsState(state.doneToday.toFloat() / state.total, label = "progress")
-                LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.size(64.dp)) {
+                    CircularProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier.fillMaxSize(),
+                        strokeWidth = 6.dp,
+                        trackColor = colors.surface.copy(alpha = 0.6f),
+                        strokeCap = StrokeCap.Round,
+                        gapSize = 0.dp,
+                    )
+                    Text(
+                        "${state.doneToday}/${state.total}",
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.clearAndSetSemantics { },
+                    )
+                }
             }
-            if (streak != null && streak >= 2) {
-                Text(
-                    stringResource(R.string.streak_home, pluralStringResource(R.plurals.streak_days, streak, streak)),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-            state.plannedHoliday?.let { planned ->
-                Text(
-                    stringResource(
-                        R.string.holiday_planned,
-                        stringResource(R.string.holiday_period, planned.start.formatShort(), planned.end.formatShort()),
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (state.total > 0) {
+                    Text(
+                        stringResource(R.string.home_progress, state.doneToday, state.total),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
+                if (streak != null && streak >= 2) {
+                    Text(
+                        stringResource(R.string.streak_home, pluralStringResource(R.plurals.streak_days, streak, streak)),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colors.tertiary,
+                    )
+                }
             }
         }
     }
+}
+
+/** A planned holiday, as a small chip that opens the holiday settings. */
+@Composable
+private fun PlannedHolidayChip(planned: Holiday, onClick: () -> Unit) {
+    AssistChip(
+        onClick = onClick,
+        label = {
+            Text(
+                stringResource(
+                    R.string.holiday_planned,
+                    stringResource(R.string.holiday_period, planned.start.formatShort(), planned.end.formatShort()),
+                ),
+            )
+        },
+        leadingIcon = { Icon(Icons.Filled.BeachAccess, contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize)) },
+        modifier = Modifier.padding(horizontal = 16.dp),
+    )
 }
 
 private fun LazyListScope.section(
@@ -243,13 +302,22 @@ private fun LazyListScope.section(
     onComplete: (Chore) -> Unit,
     action: Pair<String, () -> Unit>? = null,
     showDueToday: Boolean = true,
+    onPostpone: ((Chore) -> Unit)? = null,
 ) {
     if (chores.isEmpty()) return
     item(key = "header-$title") {
         if (action == null) SectionHeader(stringResource(title)) else SectionHeaderWithAction(stringResource(title), action.first, action.second)
     }
     items(chores, key = { "chore-${it.id}" }) { chore ->
-        ChoreRow(chore, today, onClick = { onOpen(chore) }, onComplete = { onComplete(chore) }, showDueToday = showDueToday)
+        ChoreRow(
+            chore,
+            today,
+            onClick = { onOpen(chore) },
+            onComplete = { onComplete(chore) },
+            modifier = Modifier.animateItem(),
+            showDueToday = showDueToday,
+            onPostpone = onPostpone?.let { postpone -> { postpone(chore) } },
+        )
     }
 }
 

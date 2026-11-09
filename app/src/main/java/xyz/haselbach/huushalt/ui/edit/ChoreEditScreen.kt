@@ -1,5 +1,12 @@
 package xyz.haselbach.huushalt.ui.edit
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.filled.EventRepeat
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import xyz.haselbach.huushalt.ui.scheduleLabel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -263,11 +270,6 @@ fun ChoreEditScreen(
                     }
                 },
                 actions = {
-                    if (chore != null) {
-                        IconButton(onClick = { showDeleteConfirm = true }) {
-                            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.action_delete))
-                        }
-                    }
                     TextButton(onClick = ::save) { Text(stringResource(R.string.action_save)) }
                 },
             )
@@ -339,6 +341,30 @@ fun ChoreEditScreen(
             }
 
             Text(stringResource(R.string.edit_repeat), style = MaterialTheme.typography.titleSmall)
+            // The schedule in one sentence, updated while editing.
+            if (scheduleError == null) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Filled.EventRepeat, contentDescription = null)
+                        Column {
+                            Text(scheduleLabel(schedule, if (schedule.isRepeating) toleranceDays else 0, today), style = MaterialTheme.typography.bodyLarge)
+                            adjustedDue?.let {
+                                Text(stringResource(R.string.edit_summary_next, it.formatLong()), style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+                }
+            }
             Column(Modifier.selectableGroup()) {
                 RepeatOption(repeat == Repeat.ONCE, R.string.edit_repeat_once, R.string.edit_repeat_once_help) {
                     repeat = Repeat.ONCE
@@ -355,21 +381,22 @@ fun ChoreEditScreen(
 
             if (repeat != Repeat.ONCE) {
                 val intervalError = showErrors && scheduleError == ScheduleError.INTERVAL_OUT_OF_RANGE
-                if (!isDateList) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.edit_every))
-                    OutlinedTextField(
-                        value = intervalText,
-                        onValueChange = { text -> intervalText = text.filter(Char::isDigit).take(3) },
-                        singleLine = true,
-                        isError = intervalError,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.width(80.dp),
-                    )
-                }
-                if (intervalError) {
-                    Text(stringResource(R.string.edit_error_interval), color = MaterialTheme.colorScheme.error)
-                }
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // "Alle [2] [Tage | Wochen | Monate]" on one line where it fits.
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    itemVerticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (!isDateList) {
+                        Text(stringResource(R.string.edit_every))
+                        OutlinedTextField(
+                            value = intervalText,
+                            onValueChange = { text -> intervalText = text.filter(Char::isDigit).take(3) },
+                            singleLine = true,
+                            isError = intervalError,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.width(72.dp),
+                        )
+                    }
                     listOfNotNull(
                         RepeatUnit.DAYS to R.string.edit_unit_days,
                         RepeatUnit.WEEKS to R.string.edit_unit_weeks,
@@ -385,6 +412,9 @@ fun ChoreEditScreen(
                             label = { Text(stringResource(label)) },
                         )
                     }
+                }
+                if (intervalError) {
+                    Text(stringResource(R.string.edit_error_interval), color = MaterialTheme.colorScheme.error)
                 }
                 if (repeat == Repeat.FIXED && unit == RepeatUnit.WEEKS) {
                     Text(stringResource(R.string.edit_weekdays), style = MaterialTheme.typography.titleSmall)
@@ -508,6 +538,20 @@ fun ChoreEditScreen(
             TextButton(onClick = { checklist.add(ChecklistDraft(null, "")) }) {
                 Icon(Icons.Filled.Add, contentDescription = null)
                 Text(stringResource(R.string.checklist_add), modifier = Modifier.padding(start = 8.dp))
+            }
+
+            // Deleting is at the end of the form, far away from "Speichern".
+            if (chore != null) {
+                HorizontalDivider()
+                OutlinedButton(
+                    onClick = { showDeleteConfirm = true },
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Filled.Delete, contentDescription = null)
+                    Text(stringResource(R.string.edit_delete), modifier = Modifier.padding(start = 8.dp))
+                }
             }
         }
     }
@@ -687,7 +731,10 @@ private fun RepeatOption(selected: Boolean, title: Int, help: Int, onSelect: () 
         RadioButton(selected = selected, onClick = null)
         Column(Modifier.padding(start = 12.dp)) {
             Text(stringResource(title), style = MaterialTheme.typography.bodyLarge)
-            Text(stringResource(help), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // Only the chosen option is explained, so the list stays short.
+            if (selected) {
+                Text(stringResource(help), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }
