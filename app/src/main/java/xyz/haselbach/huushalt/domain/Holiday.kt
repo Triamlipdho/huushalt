@@ -19,9 +19,12 @@ data class Holiday(
     fun isPlanned(today: LocalDate) = start > today
     fun isOver(today: LocalDate) = end < today
 
-    /** Days of this holiday up to and including [until]. */
+    /**
+     * Days of this holiday up to and including [until], at most [Progress.MAX_HISTORY_YEARS] back,
+     * so damaged data can't produce an endless list.
+     */
     fun daysUntil(until: LocalDate): Sequence<LocalDate> =
-        generateSequence(start) { it.plusDays(1) }.takeWhile { it <= end && it <= until }
+        generateSequence(maxOf(start, Progress.historyStart(until))) { it.plusDays(1) }.takeWhile { it <= end && it <= until }
 }
 
 object HolidayRules {

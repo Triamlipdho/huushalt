@@ -339,6 +339,8 @@
     <string name="data_export_failed">Export fehlgeschlagen</string>
     <string name="data_imported">Daten importiert</string>
     <string name="data_import_failed">Die Datei konnte nicht gelesen werden. Ist es ein Export von huushalt?</string>
+    <string name="data_import_invalid">Die Datei ist keine gültige huushalt-Sicherung. Es wurde nichts geändert.</string>
+    <string name="data_import_too_large">Die Datei ist zu gross für eine huushalt-Sicherung (höchstens 5 MB). Es wurde nichts geändert.</string>
     <string name="data_deleted">Alle Daten gelöscht</string>
     <plurals name="count_chores">
         <item quantity="one">%d Aufgabe</item>

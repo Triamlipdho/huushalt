@@ -21,7 +21,7 @@ import xyz.haselbach.huushalt.data.Backup
 /** Export, import and deleting all data (F9.3, F9.6). */
 class DataViewModel(private val app: HuushaltApplication) : AndroidViewModel(app) {
 
-    enum class Message { EXPORTED, EXPORT_FAILED, IMPORTED, IMPORT_FAILED, DELETED }
+    enum class Message { EXPORTED, EXPORT_FAILED, IMPORTED, IMPORT_FAILED, IMPORT_INVALID, IMPORT_TOO_LARGE, DELETED }
 
     private val messages = Channel<Message>(Channel.BUFFERED)
     val events = messages.receiveAsFlow()
@@ -42,16 +42,25 @@ class DataViewModel(private val app: HuushaltApplication) : AndroidViewModel(app
         }
     }
 
-    /** Reads the file completely; nothing changes until [confirmImport]. */
+    /** Reads (at most [Backup.MAX_FILE_BYTES]) and validates the file; nothing changes until [confirmImport]. */
     fun readImport(uri: Uri) {
         viewModelScope.launch {
-            val backup = runCatching {
+            val result = runCatching {
                 val text = withContext(Dispatchers.IO) {
-                    app.contentResolver.openInputStream(uri)!!.bufferedReader().use { it.readText() }
+                    app.contentResolver.openInputStream(uri)!!.use { Backup.readText(it) }
                 }
                 app.backups.fromJson(text)
-            }.getOrNull()
-            if (backup == null) messages.send(Message.IMPORT_FAILED) else _pendingImport.value = backup
+            }
+            result.onSuccess { _pendingImport.value = it }
+            result.onFailure { error ->
+                messages.send(
+                    when (error) {
+                        is Backup.TooLargeException -> Message.IMPORT_TOO_LARGE
+                        is Backup.InvalidBackupException -> Message.IMPORT_INVALID
+                        else -> Message.IMPORT_FAILED
+                    },
+                )
+            }
         }
     }
 
