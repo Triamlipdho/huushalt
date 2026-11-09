@@ -7,7 +7,6 @@ import android.app.NotificationManager
 import android.content.Intent
 import java.time.LocalDate
 import java.time.ZonedDateTime
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -160,7 +159,9 @@ class RemindersTest {
             app.packageManager.queryBroadcastReceivers(intent, 0).single().activityInfo.name,
         )
         ExternalTriggerReceiver().onReceive(app, intent)
-        runBlocking { app.scope.coroutineContext[Job]!!.children.forEach { it.join() } }
+        // The receiver works on the app's scope; wait for it, but not forever.
+        val deadline = System.currentTimeMillis() + 10_000
+        while (notifications().isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(20)
 
         assertEquals("1 Aufgabe heute", notifications().single().title())
     }
