@@ -14,7 +14,7 @@ only the owner can make.
 | 3. Merged branches | ✅ Deleted |
 | 4. Actions settings | ✅ Set. Fork pull requests: *Require approval for all external contributors* |
 | 5. Ruleset for `main` | ✅ Added; CI now also runs for documentation-only pull requests |
-| 6. Code security | ✅ Enabled. CodeQL: switch from default setup to `codeql.yml` (see step 6) |
+| 6. Code security | ✅ Enabled. CodeQL default setup disabled, `codeql.yml` used instead; `github/codeql-action/*` added to the allowed actions |
 | 7. Visibility | ✅ Public |
 | 8. Obtainium | ✅ Token removed. Still to do: revoke the token on GitHub |
 | 9. Verify a release | Open: next release after this change |
