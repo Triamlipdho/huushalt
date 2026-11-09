@@ -15,15 +15,20 @@ on:
         required: true
         type: string
 
-permissions:
-  contents: write
+# No permissions by default; the release job gets only what it needs.
+permissions: {}
 
 jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write # create the tag and the GitHub release
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Don't leave the write token in .git/config while Gradle and its plugins run.
+          persist-credentials: false
 
       - name: Derive version from tag
         id: version
@@ -32,6 +37,7 @@ jobs:
           REF: ${{ github.ref }}
           REF_NAME: ${{ github.ref_name }}
           INPUT_VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ "$EVENT" = "workflow_dispatch" ]; then
             if [ "$REF" != "refs/heads/main" ]; then
@@ -39,7 +45,7 @@ jobs:
               exit 1
             fi
             TAG="v$INPUT_VERSION"
-            if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --silent 2>/dev/null; then
               echo "::error::Tag $TAG already exists. Choose a higher version."
               exit 1
             fi
@@ -97,6 +103,8 @@ jobs:
 
       - name: Verify signature
         id: apk
+        env:
+          VERSION: ${{ steps.version.outputs.name }}
         run: |
           apk=app/build/outputs/apk/release/app-release.apk
           if [ ! -f "$apk" ]; then
@@ -106,7 +114,7 @@ jobs:
           fi
           apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
           "$apksigner" verify --print-certs "$apk"
-          out="huushalt-${{ steps.version.outputs.name }}.apk"
+          out="huushalt-$VERSION.apk"
           cp "$apk" "$out"
           echo "file=$out" >> "$GITHUB_OUTPUT"
 

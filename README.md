@@ -5,14 +5,45 @@
 An Android app for keeping track of household chores in a **single-person household**.
 It deliberately does one thing, chores, and does it without accounts, flatmates or finances.
 
-- MVP scope and feature list: [docs/MVP.md](docs/MVP.md)
+- Chores with flexible or fixed schedules (every n days/weeks/months, weekdays, nth weekday of
+  the month, specific dates), rooms, checklists, pausing and skipping
+- Today's overview, reminders in the morning and evening, holiday mode with catching up
+- History, streaks and statistics
+- Export and import of all data as a file
+- **Offline and private:** no account, no ads, no tracking. The app doesn't even request the
+  internet permission; all data stays on the phone (and in Android's own device backup, if
+  that is turned on).
 
-## Tech stack
+The app is in **German only** (Swiss spelling, *ss* instead of *ß*). This documentation is in
+English.
 
-- Kotlin, Jetpack Compose, Material 3
-- Android 8.0 (API 26) and newer, compiled against API 36
-- Gradle with a version catalog (`gradle/libs.versions.toml`); Dependabot keeps versions up to date
-- Package name `xyz.haselbach.huushalt` (debug builds: `xyz.haselbach.huushalt.debug`, so both can be installed side by side)
+Feature list, scope and design decisions: [docs/MVP.md](docs/MVP.md)
+
+## Install
+
+huushalt isn't in the Play Store. Signed APKs are published as
+[GitHub releases](https://github.com/Triamlipdho/huushalt/releases).
+
+**Recommended: [Obtainium](https://github.com/ImranR98/Obtainium)**, which installs the app
+from the GitHub releases and offers updates when a new version is published:
+
+1. In Obtainium, tap *Add app*.
+2. Enter the URL `https://github.com/Triamlipdho/huushalt` (source *GitHub* is detected
+   automatically) and tap *Add*.
+3. Install. Obtainium checks for new releases and offers updates.
+
+No GitHub account or access token is needed.
+
+**Or manually:** download `huushalt-<version>.apk` from the
+[latest release](https://github.com/Triamlipdho/huushalt/releases/latest) and open it on the
+phone. Android asks to allow installing from that app (e.g. the browser) once. Updates must be
+installed the same way.
+
+Requirements: Android 8.0 (API 26) or newer.
+
+All releases are signed with the same key, so updates install over the existing app and keep
+its data. A build you made yourself (debug or differently signed) can't be installed over a
+release; uninstalling deletes the app's data, so export it first (*Einstellungen → Daten*).
 
 ## Home Assistant: today's chores when you get home
 
@@ -46,42 +77,70 @@ Nothing is shown when no chore is open, during a holiday or when reminders are t
 notification replaces the morning overview, so it never piles up. To be reminded only once per
 day, add a condition to the automation (for example, only after 16:00).
 
-## Development
+## Build from source
 
-Requirements: Android Studio (or JDK 21 + Android SDK). JDK 21 is needed for the Robolectric UI tests.
+Requirements: Android Studio, or JDK 21 + the Android SDK (platform 36). JDK 21 is needed for
+the Robolectric UI tests. Without Android Studio, point Gradle to the SDK with `ANDROID_HOME`
+or a `local.properties` file containing `sdk.dir=/path/to/android-sdk` (never committed).
 
 ```bash
+git clone https://github.com/Triamlipdho/huushalt.git
+cd huushalt
 ./gradlew assembleDebug
 ```
 
-```bash
-./gradlew lintDebug testDebugUnitTest
-```
+The debug APK is in `app/build/outputs/apk/debug/`. Debug builds use the package name
+`xyz.haselbach.huushalt.debug`, so they can be installed next to a release.
 
-Before pushing, run the same checks as CI locally (lint, all unit and UI tests, debug build):
+### Checks
+
+Before opening a pull request, run the same checks as CI locally (lint, all unit and UI tests,
+debug build):
 
 ```bash
 scripts/check.sh
 ```
 
-`scripts/check.sh --release` also builds the (unsigned) release APK.
+`scripts/check.sh --release` also builds the (unsigned) release APK with R8 and resource
+shrinking. The UI tests take screenshots of every screen (light and dark) to
+`app/build/screenshots/`, which is the easiest way to see the app without a phone.
 
-### GitHub Actions minutes
+Single tasks:
 
-To keep within the free minutes of a private repository, GitHub only builds what is needed:
+```bash
+./gradlew lintDebug testDebugUnitTest
+```
+
+### Tech stack
+
+- Kotlin, Jetpack Compose, Material 3, Room, DataStore
+- Android 8.0 (API 26) and newer, compiled against API 36
+- Gradle with a version catalog (`gradle/libs.versions.toml`); Dependabot keeps versions up to date
+- Unit and UI tests with JUnit and Robolectric
+- Package name `xyz.haselbach.huushalt`
+
+### GitHub Actions
+
+GitHub only builds what is needed:
 
 - **CI** (`.github/workflows/ci.yml`) runs once per pull request to `main`, not for every push,
   not for draft pull requests and not for changes to documentation only. It can also be started
   by hand under *Actions → CI → Run workflow*. Develop and test locally with `scripts/check.sh`.
+  Pull requests from forks run with a read-only token and without access to any secrets.
 - **Release** (`.github/workflows/release.yml`) only builds and signs: the tests already passed in
   the pull request. The signing key exists only in the GitHub secrets, so signed releases are the
-  one thing that is built on GitHub.
+  one thing that is built on GitHub. Only maintainers can start it.
 - **Dependabot** checks for updates once a month.
 
-## Releases
+## Contributing and security
 
-Releases are signed APKs published as GitHub releases and installed with
-[Obtainium](https://github.com/ImranR98/Obtainium).
+- Bug reports and ideas: [issues](https://github.com/Triamlipdho/huushalt/issues). See
+  [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+- Security issues: please report them privately, see [SECURITY.md](SECURITY.md).
+
+## Releases (maintainers)
+
+Releases are signed APKs published as GitHub releases by `.github/workflows/release.yml`.
 
 ### One-time setup: signing key
 
@@ -132,12 +191,3 @@ git push origin v0.1.0
    (minor and patch must stay below 100; versions must always increase),
 2. builds and signs the release APK and checks the signature,
 3. creates the GitHub release `v1.2.3` with `huushalt-1.2.3.apk` and generated release notes.
-
-### Installing on the phone with Obtainium
-
-1. Create a fine-grained GitHub personal access token: *Settings → Developer settings → Personal
-   access tokens → Fine-grained tokens*, repository access *only this repository*, permission
-   *Contents: Read-only*.
-2. In Obtainium, add an app with source *GitHub* and the URL `https://github.com/<owner>/huushalt`.
-3. In Obtainium's settings for GitHub, enter the access token (needed because the repository is private).
-4. Install. Obtainium checks for new releases and offers updates.
