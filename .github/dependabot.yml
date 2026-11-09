@@ -1,9 +1,10 @@
 version: 2
 updates:
+  # Monthly: every update pull request costs a CI run.
   - package-ecosystem: gradle
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
     groups:
       gradle-dependencies:
         patterns: ["*"]
