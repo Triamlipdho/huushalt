@@ -408,4 +408,27 @@
     <string name="color_pink">Rosa</string>
     <string name="color_purple">Violett</string>
     <string name="color_grey">Grau</string>
+
+    <!-- Snackbars with "Rückgängig" after a change -->
+    <string name="undo_skipped">«%s» übersprungen</string>
+    <string name="undo_postponed">«%1$s» verschoben auf %2$s</string>
+    <string name="undo_paused">«%s» pausiert</string>
+    <string name="undo_resumed">«%s» fortgesetzt</string>
+    <string name="undo_deleted">«%s» gelöscht</string>
+    <string name="undo_completion_deleted">Eintrag gelöscht</string>
+    <string name="undo_completion_moved">Eintrag verschoben auf %s</string>
+    <plurals name="undo_rescheduled">
+        <item quantity="one">%d Aufgabe neu geplant</item>
+        <item quantity="other">%d Aufgaben neu geplant</item>
+    </plurals>
+    <string name="discard_title">Änderungen verwerfen?</string>
+    <string name="discard_body">Was du geändert hast, wird nicht gespeichert.</string>
+    <string name="discard_confirm">Verwerfen</string>
+    <string name="discard_keep_editing">Weiter bearbeiten</string>
+    <string name="undo_reopened">«%s» wieder offen</string>
+    <string name="home_section_done">Heute erledigt (%d)</string>
+    <string name="home_section_done_show">Erledigte anzeigen</string>
+    <string name="home_section_done_hide">Erledigte ausblenden</string>
+    <string name="action_reopen_description">«%s» wieder als offen markieren</string>
+    <string name="done_today">Erledigt</string>
 </resources>

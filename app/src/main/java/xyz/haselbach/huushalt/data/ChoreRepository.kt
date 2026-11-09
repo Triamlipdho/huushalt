@@ -26,6 +26,7 @@ class ChoreRepository(
 ) {
     private val dao = db.choreDao()
     private val holidayDao = db.holidayDao()
+    private val backupDao = db.backupDao()
 
     val holidays: Flow<List<Holiday>> = holidayDao.observeHolidays().map { list -> list.map { it.toDomain() } }
 
@@ -37,6 +38,8 @@ class ChoreRepository(
 
     /** Everything ever done, newest first (F6.3, F7). */
     val allCompletions: Flow<List<CompletionWithName>> = dao.observeAllCompletions()
+
+    fun completionsOn(date: LocalDate): Flow<List<CompletionEntity>> = dao.observeCompletionsOn(date)
 
     fun choreIdsDoneOn(date: LocalDate): Flow<Set<Long>> = dao.observeChoreIdsDoneOn(date).map { it.toSet() }
 
@@ -279,6 +282,37 @@ class ChoreRepository(
     }
 
     suspend fun delete(choreId: Long) = dao.deleteChore(choreId)
+
+    /** Everything stored about these chores right now, for [restore]. */
+    suspend fun snapshot(choreIds: List<Long>): ChoreSnapshot = db.withTransaction {
+        ChoreSnapshot(
+            chores = backupDao.choresById(choreIds),
+            dates = backupDao.datesOf(choreIds),
+            checklist = backupDao.checklistOf(choreIds),
+            completions = backupDao.completionsOf(choreIds),
+            missedPeriods = backupDao.missedPeriodsOf(choreIds),
+        )
+    }
+
+    /** Snapshot of the chores that are overdue today, taken before "Neu planen" for undo. */
+    suspend fun snapshotOverdue(today: LocalDate = LocalDate.now()): ChoreSnapshot =
+        snapshot(dao.getChores().map { it.toDomain() }.filter { it.status(today) is DueStatus.Overdue }.map { it.id })
+
+    /**
+     * Puts the chores back exactly as they were in [snapshot] (undo). Chores deleted since are
+     * created again with their ids; a room deleted in the meantime is left out.
+     */
+    suspend fun restore(snapshot: ChoreSnapshot) = db.withTransaction {
+        if (snapshot.chores.isEmpty()) return@withTransaction
+        val areas = backupDao.areaIds().toSet()
+        // Deleting cascades to dates, checklist, completions and missed periods.
+        backupDao.deleteChoresById(snapshot.choreIds)
+        backupDao.insertChores(snapshot.chores.map { if (it.areaId != null && it.areaId !in areas) it.copy(areaId = null) else it })
+        backupDao.insertDates(snapshot.dates)
+        backupDao.insertChecklist(snapshot.checklist)
+        backupDao.insertCompletions(snapshot.completions)
+        backupDao.insertMissedPeriods(snapshot.missedPeriods)
+    }
 
     /** Drops fields that don't apply to the schedule, so stored data stays consistent. */
     private fun normalize(schedule: Schedule, anchor: LocalDate): Schedule = when {

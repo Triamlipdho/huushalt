@@ -1,6 +1,18 @@
 package xyz.haselbach.huushalt.ui.home
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.text.style.TextDecoration
+import xyz.haselbach.huushalt.ui.DoneToday
+import xyz.haselbach.huushalt.ui.components.ChoreAvatar
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,10 +73,13 @@ fun HomeScreen(
     areas: List<Area> = emptyList(),
     onEditChore: (Chore) -> Unit = {},
     onOpenCatalog: () -> Unit = {},
+    /** Takes back a completion from today. */
+    onReopen: (DoneToday) -> Unit = {},
 ) {
     var confirmReschedule by rememberSaveable { mutableStateOf(false) }
     // Filter the lists by room (F3.5); null shows all.
     var areaFilter by rememberSaveable { mutableStateOf<Long?>(null) }
+    var showDone by rememberSaveable { mutableStateOf(false) }
     val filter: (List<Chore>) -> List<Chore> = { list -> areaFilter?.let { id -> list.filter { it.areaId == id } } ?: list }
     val holiday = state.activeHoliday
     val rescheduleLabel = stringResource(R.string.reschedule_action)
@@ -111,6 +126,18 @@ fun HomeScreen(
         )
         section(R.string.home_section_today, filter(state.dueToday), state.today, onOpen, onComplete, showDueToday = false)
         section(R.string.home_section_upcoming, filter(state.upcoming), state.today, onOpen, onComplete)
+        // What was done today stays visible, and can be taken back (folded away by default).
+        val done = state.doneTodayList.filter { item -> areaFilter == null || item.chore.areaId == areaFilter }
+        if (done.isNotEmpty()) {
+            item(key = "header-done") {
+                DoneHeader(done.size, expanded = showDone, onToggle = { showDone = !showDone })
+            }
+            if (showDone) {
+                items(done, key = { "done-${it.completionId}" }) { item ->
+                    DoneRow(item, onClick = { onOpen(item.chore) }, onReopen = { onReopen(item) })
+                }
+            }
+        }
     }
 
     if (confirmReschedule) {
@@ -224,4 +251,48 @@ private fun LazyListScope.section(
     items(chores, key = { "chore-${it.id}" }) { chore ->
         ChoreRow(chore, today, onClick = { onOpen(chore) }, onComplete = { onComplete(chore) }, showDueToday = showDueToday)
     }
+}
+
+@Composable
+private fun DoneHeader(count: Int, expanded: Boolean, onToggle: () -> Unit) {
+    val action = stringResource(if (expanded) R.string.home_section_done_hide else R.string.home_section_done_show)
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClickLabel = action, onClick = onToggle)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            stringResource(R.string.home_section_done, count),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, contentDescription = null)
+    }
+}
+
+@Composable
+private fun DoneRow(item: DoneToday, onClick: () -> Unit, onReopen: () -> Unit) {
+    ListItem(
+        modifier = Modifier.clickable(onClick = onClick),
+        leadingContent = { ChoreAvatar(item.chore.look, Modifier.alpha(0.6f)) },
+        headlineContent = {
+            Text(
+                item.chore.name,
+                textDecoration = TextDecoration.LineThrough,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        supportingContent = { Text(stringResource(R.string.done_today), color = MaterialTheme.colorScheme.onSurfaceVariant) },
+        trailingContent = {
+            IconButton(onClick = onReopen) {
+                Icon(
+                    Icons.AutoMirrored.Filled.Undo,
+                    contentDescription = stringResource(R.string.action_reopen_description, item.chore.name),
+                )
+            }
+        },
+    )
 }

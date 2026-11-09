@@ -1,5 +1,6 @@
 package xyz.haselbach.huushalt.ui
 
+import android.content.res.Resources
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -28,6 +29,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -118,7 +120,11 @@ fun HuushaltApp(
     fun backToTab() {
         while (stack.size > 1) stack.removeAt(stack.lastIndex)
     }
-    BackHandler(enabled = stack.size > 1) { back() }
+    // In the editor, back is passed on, so it can ask before unsaved changes are lost.
+    var editorBackRequests by remember { mutableIntStateOf(0) }
+    BackHandler(enabled = stack.size > 1) {
+        if (stack.last().let { it.startsWith("edit:") || it.startsWith("copy:") }) editorBackRequests++ else back()
+    }
 
     // A tapped reminder shows the daily overview (F5.3); app shortcuts open "Neue Aufgabe" or the
     // suggestions (F9.7).
@@ -133,7 +139,9 @@ fun HuushaltApp(
         }
     }
 
-    // Snackbar "«Staubsaugen» erledigt – Rückgängig" after marking a chore done (F4.2).
+    // Snackbar "«Staubsaugen» erledigt – Rückgängig" after marking a chore done (F4.2), and the
+    // same for every other change (skip, postpone, pause, delete, ...).
+    val context = LocalContext.current
     val completedText = stringResource(R.string.snackbar_completed)
     val allDoneText = stringResource(R.string.celebration_all_done)
     val motivationEnabled = settings?.motivationEnabled ?: true
@@ -152,6 +160,17 @@ fun HuushaltApp(
                             duration = SnackbarDuration.Short,
                         )
                         if (result == SnackbarResult.ActionPerformed) viewModel.undoCompletion(event.completionId)
+                    }
+                }
+                is UiEvent.Changed -> {
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                    launch {
+                        val result = snackbarHostState.showSnackbar(
+                            message = changeMessage(context.resources, event),
+                            actionLabel = undoText,
+                            duration = SnackbarDuration.Long,
+                        )
+                        if (result == SnackbarResult.ActionPerformed) viewModel.undo(event.snapshot)
                     }
                 }
             }
@@ -184,7 +203,6 @@ fun HuushaltApp(
     }
 
     // Once everything is done, a reminder still showing is out of date.
-    val context = LocalContext.current
     LaunchedEffect(homeState.open) {
         if (homeState.open == 0) (context.applicationContext as HuushaltApplication).notifier.cancel()
     }
@@ -218,6 +236,7 @@ fun HuushaltApp(
                     areas = allAreas,
                     onEditChore = { open(Route.edit(it.id)) },
                     onOpenCatalog = { open(Route.CATALOG) },
+                    onReopen = { viewModel.reopen(it.chore.id, it.completionId) },
                     header = {
                         if (showPermissionCard) {
                             PermissionCard(
@@ -266,8 +285,8 @@ fun HuushaltApp(
                 onEdit = { open(Route.edit(id)) },
                 onComplete = { complete(chore) },
                 onPostpone = { viewModel.postpone(id, it) },
-                onChangeCompletionDate = viewModel::changeCompletionDate,
-                onDeleteCompletion = viewModel::deleteCompletion,
+                onChangeCompletionDate = { completionId, date -> viewModel.changeCompletionDate(id, completionId, date) },
+                onDeleteCompletion = { completionId -> viewModel.deleteCompletion(id, completionId) },
                 streak = progressState.choreStreaks[id].takeIf { appSettings.motivationEnabled },
                 checklist = checklist,
                 onToggleItem = { viewModel.setChecked(it.id, !it.checked) },
@@ -301,6 +320,7 @@ fun HuushaltApp(
                 firstDayOfWeek = appSettings.firstDayOfWeek,
                 copyOf = if (isCopy) source else null,
                 existingNames = allChores.map { it.name }.toSet(),
+                backRequests = editorBackRequests,
                 onClose = ::back,
                 onSave = { draft ->
                     viewModel.save(
@@ -423,6 +443,19 @@ fun HuushaltApp(
 
         else -> LaunchedEffect(route) { backToTab() }
     }
+}
+
+/** Snackbar text for a change that can be undone. */
+private fun changeMessage(res: Resources, event: UiEvent.Changed): String = when (event.kind) {
+    ChangeKind.SKIPPED -> res.getString(R.string.undo_skipped, event.choreName)
+    ChangeKind.POSTPONED -> res.getString(R.string.undo_postponed, event.choreName, event.date?.formatShort().orEmpty())
+    ChangeKind.PAUSED -> res.getString(R.string.undo_paused, event.choreName)
+    ChangeKind.RESUMED -> res.getString(R.string.undo_resumed, event.choreName)
+    ChangeKind.DELETED -> res.getString(R.string.undo_deleted, event.choreName)
+    ChangeKind.COMPLETION_DELETED -> res.getString(R.string.undo_completion_deleted)
+    ChangeKind.COMPLETION_MOVED -> res.getString(R.string.undo_completion_moved, event.date?.formatShort().orEmpty())
+    ChangeKind.REOPENED -> res.getString(R.string.undo_reopened, event.choreName)
+    ChangeKind.RESCHEDULED -> res.getQuantityString(R.plurals.undo_rescheduled, event.count, event.count)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

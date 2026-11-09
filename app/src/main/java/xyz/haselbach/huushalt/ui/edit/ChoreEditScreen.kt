@@ -44,6 +44,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -110,6 +112,8 @@ fun ChoreEditScreen(
     copyOf: Chore? = null,
     /** Names of existing chores; their catalogue suggestions are not offered again. */
     existingNames: Set<String> = emptySet(),
+    /** Counts presses of the system back button; each one is handled like the close button. */
+    backRequests: Int = 0,
 ) {
     // Values come from the chore being edited, or the one being copied.
     val source = chore ?: copyOf
@@ -163,6 +167,22 @@ fun ChoreEditScreen(
     val checklist = rememberSaveable(saver = checklistSaver) {
         // A copy gets new checklist items (no ids), the edited chore keeps its own.
         initialChecklist.map { ChecklistDraft(if (chore != null) it.id else null, it.text) }.toMutableStateList()
+    }
+
+    // Everything the form holds, to tell whether leaving would lose changes.
+    val formState = listOf(
+        name, notes, repeat, unit, intervalText, weekdayMask, dueEpochDay, monthlyRule, dateList.toList(),
+        toleranceDays, symbolKey, colorKey, areaId, newAreaName, checklist.toList(),
+    ).toString()
+    val initialFormState by rememberSaveable { mutableStateOf(formState) }
+    val hasChanges = formState != initialFormState
+    var showDiscardConfirm by rememberSaveable { mutableStateOf(false) }
+    fun close() {
+        if (hasChanges) showDiscardConfirm = true else onClose()
+    }
+    val handledBackRequests = remember { backRequests }
+    LaunchedEffect(backRequests) {
+        if (backRequests != handledBackRequests) close()
     }
 
     /** Quick create: fill the form from a catalogue suggestion. */
@@ -238,7 +258,7 @@ fun ChoreEditScreen(
             TopAppBar(
                 title = { Text(stringResource(if (chore == null) R.string.edit_title_new else R.string.edit_title_edit)) },
                 navigationIcon = {
-                    IconButton(onClick = onClose) {
+                    IconButton(onClick = ::close) {
                         Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_cancel))
                     }
                 },
@@ -528,6 +548,23 @@ fun ChoreEditScreen(
             onConfirm = {
                 if (it.toEpochDay() !in dateList) dateList.add(it.toEpochDay())
                 showDateListPicker = false
+            },
+        )
+    }
+
+    if (showDiscardConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDiscardConfirm = false },
+            title = { Text(stringResource(R.string.discard_title)) },
+            text = { Text(stringResource(R.string.discard_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDiscardConfirm = false
+                    onClose()
+                }) { Text(stringResource(R.string.discard_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardConfirm = false }) { Text(stringResource(R.string.discard_keep_editing)) }
             },
         )
     }

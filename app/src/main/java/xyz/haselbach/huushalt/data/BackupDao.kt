@@ -26,4 +26,13 @@ interface BackupDao {
     @Query("DELETE FROM chores") suspend fun deleteChores()
     @Query("DELETE FROM areas") suspend fun deleteAreas()
     @Query("DELETE FROM holidays") suspend fun deleteHolidays()
+
+    // Snapshots of single chores, so any change can be undone (see ChoreSnapshot).
+    @Query("SELECT * FROM chores WHERE id IN (:ids)") suspend fun choresById(ids: List<Long>): List<ChoreEntity>
+    @Query("SELECT * FROM chore_dates WHERE choreId IN (:ids)") suspend fun datesOf(ids: List<Long>): List<ChoreDateEntity>
+    @Query("SELECT * FROM checklist_items WHERE choreId IN (:ids)") suspend fun checklistOf(ids: List<Long>): List<ChecklistItemEntity>
+    @Query("SELECT * FROM completions WHERE choreId IN (:ids)") suspend fun completionsOf(ids: List<Long>): List<CompletionEntity>
+    @Query("SELECT * FROM missed_periods WHERE choreId IN (:ids)") suspend fun missedPeriodsOf(ids: List<Long>): List<MissedPeriodEntity>
+    @Query("SELECT id FROM areas") suspend fun areaIds(): List<Long>
+    @Query("DELETE FROM chores WHERE id IN (:ids)") suspend fun deleteChoresById(ids: List<Long>)
 }
