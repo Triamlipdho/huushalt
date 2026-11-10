@@ -42,6 +42,8 @@ data class AppSettings(
     val firstDayOfWeek: DayOfWeek = DayOfWeek.MONDAY,
     /** Interval suggestions answered with "Nein danke", as [IntervalSuggestion.key]s (F2.13). */
     val dismissedIntervalSuggestions: Set<String> = emptySet(),
+    /** Badges already announced with a snackbar (F7.7); null until the first check. */
+    val announcedBadges: Set<String>? = null,
 )
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
@@ -71,6 +73,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             prefs[DYNAMIC_COLOR] = new.dynamicColor
             prefs[FIRST_DAY_OF_WEEK] = new.firstDayOfWeek.value
             prefs[DISMISSED_INTERVAL_SUGGESTIONS] = new.dismissedIntervalSuggestions
+            new.announcedBadges?.let { prefs[ANNOUNCED_BADGES] = it } ?: prefs.remove(ANNOUNCED_BADGES)
         }
     }
 
@@ -87,6 +90,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val FIRST_DAY_OF_WEEK = intPreferencesKey("first_day_of_week")
         val DISMISSED_INTERVAL_SUGGESTIONS = stringSetPreferencesKey("dismissed_interval_suggestions")
+        val ANNOUNCED_BADGES = stringSetPreferencesKey("announced_badges")
 
         fun Preferences.toSettings(): AppSettings {
             val defaults = ReminderSettings()
@@ -105,6 +109,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
                 dynamicColor = this[DYNAMIC_COLOR] ?: false,
                 firstDayOfWeek = this[FIRST_DAY_OF_WEEK]?.let { DayOfWeek.of(it) } ?: DayOfWeek.MONDAY,
                 dismissedIntervalSuggestions = this[DISMISSED_INTERVAL_SUGGESTIONS] ?: emptySet(),
+                announcedBadges = this[ANNOUNCED_BADGES],
             )
         }
 

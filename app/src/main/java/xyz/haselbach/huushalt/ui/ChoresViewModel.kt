@@ -31,6 +31,10 @@ import xyz.haselbach.huushalt.data.CompletionEntity
 import xyz.haselbach.huushalt.data.CompletionWithName
 import xyz.haselbach.huushalt.data.toRecord
 import xyz.haselbach.huushalt.domain.Area
+import xyz.haselbach.huushalt.domain.AreaCount
+import xyz.haselbach.huushalt.domain.AreaStats
+import xyz.haselbach.huushalt.domain.Badge
+import xyz.haselbach.huushalt.domain.Badges
 import xyz.haselbach.huushalt.domain.ChecklistItem
 import xyz.haselbach.huushalt.domain.Chore
 import xyz.haselbach.huushalt.domain.ChoreColor
@@ -80,6 +84,10 @@ data class ProgressState(
     val recent: List<CompletionWithName>,
     /** Per chore: completions in a row done on time (F7.3). */
     val choreStreaks: Map<Long, Int>,
+    /** Milestones (F7.7). */
+    val badges: List<Badge> = emptyList(),
+    /** Completions per room in the last 30 days, most first (F7.8). */
+    val areaCounts: List<AreaCount> = emptyList(),
 )
 
 sealed interface UiEvent {
@@ -190,6 +198,8 @@ class ChoresViewModel(
                 choreStreaks = chores.associate { chore ->
                     chore.id to Progress.choreStreak(byChore[chore.id].orEmpty(), chore.status(today) is DueStatus.Overdue)
                 },
+                badges = Badges.of(records, streaks.best),
+                areaCounts = AreaStats.last30Days(records, chores.associate { it.id to it.areaId }, today),
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 

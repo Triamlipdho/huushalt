@@ -195,17 +195,16 @@ coming back to a wall of overdue chores is the fastest way to give up on the app
 | 0 Project setup | Android project, CI, signed releases via GitHub Releases + Obtainium | Done (v0.1.0) |
 | 1 Chore basics | F1.1, F1.2, F2.1 to F2.6, F2.9, F3.1 to F3.4, F4.1, F4.2, F4.4, F4.7, F6.1, F6.2, F7.1, F8.1, F9.1, F9.2, F9.5, F10.5 | Done |
 | 2 Reminders | F5.1 to F5.4, F5.7, F8.3, N8 | Done |
-| 3 Motivation and history | F6.3, F6.4, F7.1 to F7.6, F7.9 | Done (F7.7 badges and F7.8 room statistics later) |
+| 3 Motivation and history | F6.3, F6.4, F7.1 to F7.6, F7.9 | Done (F7.7 badges and F7.8 room statistics in milestone 10) |
 | 4 Holidays and catching up | F10.1 to F10.4, F10.6 | Done |
-| 5a Rooms, pausing, checklists | F1.3, F1.4, F1.7, F1.8, F3.5 | Done (F1.9 later) |
+| 5a Rooms, pausing, checklists | F1.3, F1.4, F1.7, F1.8, F3.5 | Done (F1.9 in milestone 10) |
 | 5b More schedules and completion options | F2.10 to F2.12, F4.3, F4.5 | Done |
 | 6 Settings and data | F8.2, F9.3, F9.4, F9.6 | Done (v1.0.0: MVP complete) |
 | 7 Visual review, quick create | Rework after a screenshot review; quick create from suggestions, F1.10 duplicate, F3.7 search, F9.7 app shortcuts, themed icon | Done |
 | 8 Home Assistant | F5.8 | Done |
 | 9 UX review | Undo for every change (snapshot of the chore), ask before discarding edits, "Heute erledigt" section, swipe to complete / postpone, own green colour scheme with terracotta accent (wallpaper colours optional), progress ring, calmer detail and editor screens, history with punctuality, rolling 7/30-day statistics, screen transitions | Done |
-| 10 Behaviour and motivation | F1.9 last checklist item completes the chore (undo ticks the others again); F2.13 interval suggestions: median gap of the last 8 completions of a flexible chore, shown on the detail screen and as a hint on Heute, "Übernehmen" (with undo) or "Nein danke" (remembered per suggested value) | Done |
 | Security hardening | Import validates the whole file (schedules, date range 1900 to 2200, references) and refuses it without changes; import files limited to 5 MB; GitHub Actions pinned to commit SHAs | Done |
-| F3.6 Week view | "Liste \| Woche" in Alle Aufgaben: one week per page from the first day of the week, up to 12 weeks ahead; repeating chores on every day they will be due (forecast shown quieter), overdue ones on today, holidays respected | Done |
+| 10 Behaviour and motivation | F1.9 last checklist item completes the chore (undo ticks the others again); F2.13 interval suggestions: median gap of the last 8 completions of a flexible chore, shown on the detail screen and as a hint on Heute, "Übernehmen" (with undo) or "Nein danke" (remembered per suggested value); F3.6 week view: "Liste \| Woche" in Alle Aufgaben: one week per page from the first day of the week, up to 12 weeks ahead; repeating chores on every day they will be due (forecast shown quieter), overdue ones on today, holidays respected; F7.7 badges (10 milestones from completions and best streaks, announced once; hidden without motivation), F7.8 completions per room in the last 30 days (statistics, so they stay without motivation) | Done |
 
 ## Non-functional requirements
 
