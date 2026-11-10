@@ -75,6 +75,7 @@ import xyz.haselbach.huushalt.ui.chores.AllChoresScreen
 import xyz.haselbach.huushalt.ui.detail.ChoreDetailScreen
 import xyz.haselbach.huushalt.ui.edit.ChoreEditScreen
 import xyz.haselbach.huushalt.ui.components.PermissionCard
+import xyz.haselbach.huushalt.ui.components.everyLabel
 import xyz.haselbach.huushalt.ui.holiday.HolidayScreen
 import xyz.haselbach.huushalt.ui.home.HomeScreen
 import xyz.haselbach.huushalt.ui.progress.ProgressScreen
@@ -120,6 +121,7 @@ fun HuushaltApp(
     val home by viewModel.home.collectAsStateWithLifecycle()
     val progress by viewModel.progress.collectAsStateWithLifecycle()
     val areas by viewModel.areas.collectAsStateWithLifecycle()
+    val intervalSuggestions by viewModel.intervalSuggestions.collectAsStateWithLifecycle()
     // A chore with an unfinished checklist waiting for "Trotzdem erledigt?" (F1.8).
     var confirmCompleteId by rememberSaveable { mutableStateOf<Long?>(null) }
     val today by viewModel.today.collectAsStateWithLifecycle()
@@ -270,6 +272,9 @@ fun HuushaltApp(
                         onOpenCatalog = { open(Route.CATALOG) },
                         onReopen = { viewModel.reopen(it.chore.id, it.completionId) },
                         onPostponeToTomorrow = { viewModel.postpone(it.id, today.plusDays(1)) },
+                        intervalSuggestions = intervalSuggestions.values.mapNotNull { suggestion ->
+                            allChores.find { it.id == suggestion.choreId }?.let { it to suggestion }
+                        },
                         header = {
                             if (showPermissionCard) {
                                 PermissionCard(
@@ -331,6 +336,13 @@ fun HuushaltApp(
                     onDelete = {
                         viewModel.delete(id)
                         backToTab()
+                    },
+                    intervalSuggestion = intervalSuggestions[id],
+                    onAcceptSuggestion = { intervalSuggestions[id]?.let(viewModel::acceptIntervalSuggestion) },
+                    onDismissSuggestion = {
+                        intervalSuggestions[id]?.let { suggestion ->
+                            settingsViewModel.update { it.copy(dismissedIntervalSuggestions = it.dismissedIntervalSuggestions + suggestion.key) }
+                        }
                     },
                 )
             }
@@ -522,6 +534,11 @@ private fun changeMessage(res: Resources, event: UiEvent.Changed): String = when
     ChangeKind.COMPLETION_MOVED -> res.getString(R.string.undo_completion_moved, event.date?.formatShort().orEmpty())
     ChangeKind.REOPENED -> res.getString(R.string.undo_reopened, event.choreName)
     ChangeKind.RESCHEDULED -> res.getQuantityString(R.plurals.undo_rescheduled, event.count, event.count)
+    ChangeKind.INTERVAL_CHANGED -> res.getString(
+        R.string.undo_interval_changed,
+        event.choreName,
+        event.token.after.chores.firstOrNull()?.let { res.everyLabel(it.interval, it.unit) }.orEmpty(),
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

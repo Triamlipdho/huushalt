@@ -38,6 +38,8 @@ import xyz.haselbach.huushalt.domain.ChoreSymbol
 import xyz.haselbach.huushalt.domain.ChoreTemplate
 import xyz.haselbach.huushalt.domain.DueStatus
 import xyz.haselbach.huushalt.domain.Holiday
+import xyz.haselbach.huushalt.domain.IntervalSuggestion
+import xyz.haselbach.huushalt.domain.IntervalSuggestions
 import xyz.haselbach.huushalt.domain.Progress
 import xyz.haselbach.huushalt.domain.RepeatUnit
 import xyz.haselbach.huushalt.domain.Stats
@@ -100,7 +102,7 @@ sealed interface UiEvent {
     data object UndoNotPossible : UiEvent
 }
 
-enum class ChangeKind { SKIPPED, POSTPONED, PAUSED, RESUMED, DELETED, COMPLETION_DELETED, COMPLETION_MOVED, RESCHEDULED, REOPENED }
+enum class ChangeKind { SKIPPED, POSTPONED, PAUSED, RESUMED, DELETED, COMPLETION_DELETED, COMPLETION_MOVED, RESCHEDULED, REOPENED, INTERVAL_CHANGED }
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChoresViewModel(
@@ -109,6 +111,7 @@ class ChoresViewModel(
 ) : ViewModel() {
 
     private val weekStart = settings.map { it.firstDayOfWeek }.distinctUntilChanged()
+    private val dismissedSuggestions = settings.map { it.dismissedIntervalSuggestions }.distinctUntilChanged()
 
     private val _today = MutableStateFlow(LocalDate.now())
     val today: StateFlow<LocalDate> = _today.asStateFlow()
@@ -183,6 +186,19 @@ class ChoresViewModel(
                 },
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /**
+     * Open interval suggestions (F2.13) by chore id, ordered by chore name; dismissed ones are left
+     * out.
+     */
+    val intervalSuggestions: StateFlow<Map<Long, IntervalSuggestion>> =
+        combine(repository.chores, repository.allCompletions, dismissedSuggestions) { chores, completions, dismissed ->
+            val dates = completions.groupBy({ it.completion.choreId }, { it.completion.doneDate })
+            chores.sortedBy { it.name.lowercase() }
+                .mapNotNull { chore -> IntervalSuggestions.suggest(chore, dates[chore.id].orEmpty()) }
+                .filterNot { it.key in dismissed }
+                .associateBy { it.choreId }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     private val events = Channel<UiEvent>(Channel.BUFFERED)
     val uiEvents: Flow<UiEvent> = events.receiveAsFlow()
@@ -321,6 +337,10 @@ class ChoresViewModel(
     }
 
     fun delete(choreId: Long) = undoable(ChangeKind.DELETED, choreId) { repository.delete(choreId) }
+
+    /** "Übernehmen" on an interval suggestion (F2.13), with undo. */
+    fun acceptIntervalSuggestion(suggestion: IntervalSuggestion) =
+        undoable(ChangeKind.INTERVAL_CHANGED, suggestion.choreId) { repository.setInterval(suggestion.choreId, suggestion.interval) }
 
     companion object {
         private const val RECENT_COUNT = 100

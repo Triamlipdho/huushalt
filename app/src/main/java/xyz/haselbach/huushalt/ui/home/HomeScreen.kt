@@ -55,6 +55,8 @@ import xyz.haselbach.huushalt.R
 import xyz.haselbach.huushalt.domain.Area
 import xyz.haselbach.huushalt.domain.Chore
 import xyz.haselbach.huushalt.domain.Holiday
+import xyz.haselbach.huushalt.domain.IntervalSuggestion
+import xyz.haselbach.huushalt.ui.components.IntervalSuggestionHint
 import xyz.haselbach.huushalt.ui.HomeState
 import xyz.haselbach.huushalt.ui.components.ChoreRow
 import xyz.haselbach.huushalt.ui.components.EmptyState
@@ -83,6 +85,8 @@ fun HomeScreen(
     onReopen: (DoneToday) -> Unit = {},
     /** Swipe left on a due chore: tomorrow. */
     onPostponeToTomorrow: (Chore) -> Unit = {},
+    /** Open interval suggestions (F2.13); the first one is shown as a hint that opens its chore. */
+    intervalSuggestions: List<Pair<Chore, IntervalSuggestion>> = emptyList(),
 ) {
     var confirmReschedule by rememberSaveable { mutableStateOf(false) }
     // Filter the lists by room (F3.5); null shows all.
@@ -109,6 +113,11 @@ fun HomeScreen(
         }
         state.plannedHoliday?.let { planned ->
             item(key = "planned-holiday") { PlannedHolidayChip(planned, onClick = onChangeHoliday) }
+        }
+        intervalSuggestions.firstOrNull()?.let { (chore, suggestion) ->
+            item(key = "interval-suggestion") {
+                IntervalSuggestionHint(chore, suggestion, more = intervalSuggestions.size - 1, onClick = { onOpen(chore) })
+            }
         }
         if (areas.isNotEmpty() && state.hasChores) {
             item(key = "areas") {

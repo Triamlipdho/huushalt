@@ -69,7 +69,9 @@ import xyz.haselbach.huushalt.data.CompletionEntity
 import xyz.haselbach.huushalt.domain.ChecklistItem
 import xyz.haselbach.huushalt.domain.Chore
 import xyz.haselbach.huushalt.domain.DueStatus
+import xyz.haselbach.huushalt.domain.IntervalSuggestion
 import xyz.haselbach.huushalt.ui.components.ChoreAvatar
+import xyz.haselbach.huushalt.ui.components.IntervalSuggestionCard
 import xyz.haselbach.huushalt.ui.components.LocalDatePickerDialog
 import xyz.haselbach.huushalt.ui.components.SectionHeader
 import xyz.haselbach.huushalt.ui.dueLabel
@@ -102,6 +104,10 @@ fun ChoreDetailScreen(
     /** Create a new chore with the same settings (F1.10). */
     onDuplicate: () -> Unit = {},
     onDelete: () -> Unit = {},
+    /** Open interval suggestion (F2.13), with "Übernehmen" and "Nein danke". */
+    intervalSuggestion: IntervalSuggestion? = null,
+    onAcceptSuggestion: () -> Unit = {},
+    onDismissSuggestion: () -> Unit = {},
 ) {
     var showPostpone by rememberSaveable { mutableStateOf(false) }
     var showMenu by rememberSaveable { mutableStateOf(false) }
@@ -200,6 +206,11 @@ fun ChoreDetailScreen(
                             }
                         }
                     }
+                }
+            }
+            if (intervalSuggestion != null && !chore.paused) {
+                item(key = "interval-suggestion") {
+                    IntervalSuggestionCard(chore, intervalSuggestion, onAccept = onAcceptSuggestion, onDismiss = onDismissSuggestion)
                 }
             }
             if (checklist.isNotEmpty()) {
