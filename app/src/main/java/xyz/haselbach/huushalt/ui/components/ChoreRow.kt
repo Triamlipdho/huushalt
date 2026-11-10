@@ -68,7 +68,7 @@ fun ChoreRow(
     modifier: Modifier = Modifier,
     showArea: Boolean = true,
     showDueToday: Boolean = true,
-    /** Swipe left: postpone to tomorrow. Null: no swipe to the left. */
+    /** Swipe left: postpone by one day. Null: no swipe to the left. */
     onPostpone: (() -> Unit)? = null,
 ) {
     val status = chore.status(today)
@@ -89,7 +89,7 @@ fun ChoreRow(
         onComplete()
     }
     val completeLabel = stringResource(R.string.action_complete_description, chore.name)
-    val postponeLabel = stringResource(R.string.action_postpone_tomorrow_description, chore.name)
+    val postponeLabel = stringResource(R.string.action_postpone_one_day_description, chore.name)
     val row = @Composable {
         ListItem(
             modifier = Modifier
@@ -148,7 +148,7 @@ fun ChoreRow(
         Box(modifier) { row() }
         return
     }
-    // Swipe right: done; swipe left: tomorrow. The row snaps back, the list then updates.
+    // Swipe right: done (green); swipe left: one day later (red). The row snaps back, the list then updates.
     // The state keeps its callback for as long as the row is shown, so it must read the current
     // actions (the chore or "today" may have changed since), and act only once per swipe: the
     // callback can be asked more than once at the end of a gesture.
@@ -186,7 +186,7 @@ private fun SwipeBackground(direction: SwipeToDismissBoxValue) {
     val colors = MaterialTheme.colorScheme
     val (color, icon, alignment) = when (direction) {
         SwipeToDismissBoxValue.StartToEnd -> Triple(colors.primaryContainer, Icons.Filled.Check, Alignment.CenterStart)
-        SwipeToDismissBoxValue.EndToStart -> Triple(colors.tertiaryContainer, Icons.Filled.Event, Alignment.CenterEnd)
+        SwipeToDismissBoxValue.EndToStart -> Triple(colors.errorContainer, Icons.Filled.Event, Alignment.CenterEnd)
         SwipeToDismissBoxValue.Settled -> Triple(Color.Transparent, null, Alignment.Center)
     }
     Box(
@@ -200,7 +200,7 @@ private fun SwipeBackground(direction: SwipeToDismissBoxValue) {
             Icon(
                 icon,
                 contentDescription = null,
-                tint = if (direction == SwipeToDismissBoxValue.StartToEnd) colors.onPrimaryContainer else colors.onTertiaryContainer,
+                tint = if (direction == SwipeToDismissBoxValue.StartToEnd) colors.onPrimaryContainer else colors.onErrorContainer,
             )
         }
     }

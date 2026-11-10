@@ -83,8 +83,8 @@ fun HomeScreen(
     onOpenCatalog: () -> Unit = {},
     /** Takes back a completion from today. */
     onReopen: (DoneToday) -> Unit = {},
-    /** Swipe left on a due chore: tomorrow. */
-    onPostponeToTomorrow: (Chore) -> Unit = {},
+    /** Swipe left: one day later (due chores: tomorrow). */
+    onPostpone: (Chore) -> Unit = {},
     /** Open interval suggestions (F2.13); the first one is shown as a hint that opens its chore. */
     intervalSuggestions: List<Pair<Chore, IntervalSuggestion>> = emptyList(),
 ) {
@@ -145,7 +145,7 @@ fun HomeScreen(
             onOpen,
             onComplete,
             action = rescheduleLabel to { confirmReschedule = true },
-            onPostpone = onPostponeToTomorrow,
+            onPostpone = onPostpone,
         )
         section(
             R.string.home_section_today,
@@ -154,9 +154,9 @@ fun HomeScreen(
             onOpen,
             onComplete,
             showDueToday = false,
-            onPostpone = onPostponeToTomorrow,
+            onPostpone = onPostpone,
         )
-        section(R.string.home_section_upcoming, filter(state.upcoming), state.today, onOpen, onComplete)
+        section(R.string.home_section_upcoming, filter(state.upcoming), state.today, onOpen, onComplete, onPostpone = onPostpone)
         // What was done today stays visible, and can be taken back (folded away by default).
         val done = state.doneTodayList.filter { item -> areaFilter == null || item.chore.areaId == areaFilter }
         if (done.isNotEmpty()) {
