@@ -116,7 +116,15 @@ object Progress {
             completions.count { it.doneDate >= weekStart && it.doneDate < weekStart.plusWeeks(1) }
         fun countMonth(month: YearMonth) = completions.count { YearMonth.from(it.doneDate) == month }
         val recent = completions.filter { it.doneDate > today.minusDays(ON_TIME_DAYS) && it.doneDate <= today }
+        // Rolling periods ending today, so a new week or month never starts at an unfair 0.
+        fun countDays(daysAgoFrom: Long, days: Long) = completions.count {
+            it.doneDate <= today.minusDays(daysAgoFrom) && it.doneDate > today.minusDays(daysAgoFrom + days)
+        }
         return Stats(
+            last7Days = countDays(0, 7),
+            previous7Days = countDays(7, 7),
+            last30Days = countDays(0, 30),
+            previous30Days = countDays(30, 30),
             thisWeek = countWeek(thisWeekStart),
             lastWeek = countWeek(thisWeekStart.minusWeeks(1)),
             thisMonth = countMonth(thisMonth),
@@ -145,6 +153,12 @@ object Progress {
 data class WeekCount(val weekStart: LocalDate, val count: Int)
 
 data class Stats(
+    /** Completions in the last 7 days including today, and in the 7 days before. */
+    val last7Days: Int,
+    val previous7Days: Int,
+    /** The same for 30 days. */
+    val last30Days: Int,
+    val previous30Days: Int,
     val thisWeek: Int,
     val lastWeek: Int,
     val thisMonth: Int,

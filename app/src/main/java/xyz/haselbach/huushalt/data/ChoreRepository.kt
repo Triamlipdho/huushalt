@@ -26,6 +26,7 @@ class ChoreRepository(
 ) {
     private val dao = db.choreDao()
     private val holidayDao = db.holidayDao()
+    private val backupDao = db.backupDao()
 
     val holidays: Flow<List<Holiday>> = holidayDao.observeHolidays().map { list -> list.map { it.toDomain() } }
 
@@ -37,6 +38,8 @@ class ChoreRepository(
 
     /** Everything ever done, newest first (F6.3, F7). */
     val allCompletions: Flow<List<CompletionWithName>> = dao.observeAllCompletions()
+
+    fun completionsOn(date: LocalDate): Flow<List<CompletionEntity>> = dao.observeCompletionsOn(date)
 
     fun choreIdsDoneOn(date: LocalDate): Flow<Set<Long>> = dao.observeChoreIdsDoneOn(date).map { it.toSet() }
 
@@ -279,6 +282,55 @@ class ChoreRepository(
     }
 
     suspend fun delete(choreId: Long) = dao.deleteChore(choreId)
+
+    /** Everything stored about these chores right now. */
+    private suspend fun snapshot(choreIds: List<Long>): ChoreSnapshot = ChoreSnapshot(
+        chores = backupDao.choresById(choreIds).sortedBy { it.id },
+        dates = backupDao.datesOf(choreIds).sortedBy { it.id },
+        checklist = backupDao.checklistOf(choreIds).sortedBy { it.id },
+        completions = backupDao.completionsOf(choreIds).sortedBy { it.id },
+        missedPeriods = backupDao.missedPeriodsOf(choreIds).sortedBy { it.id },
+    )
+
+    /**
+     * Runs [change] on the chores [choreIds] picks, in one transaction with a snapshot before and
+     * after, so the change can be undone with [undo].
+     */
+    suspend fun changeUndoably(choreIds: suspend () -> List<Long>, change: suspend () -> Unit): UndoToken =
+        db.withTransaction {
+            val ids = choreIds()
+            val before = snapshot(ids)
+            change()
+            UndoToken(ids, before, snapshot(ids))
+        }
+
+    suspend fun changeUndoably(choreId: Long, change: suspend () -> Unit): UndoToken =
+        changeUndoably({ listOf(choreId) }, change)
+
+    /** "Neu planen ab heute" (F10.6) that can be undone. */
+    suspend fun rescheduleOverdueUndoably(today: LocalDate = LocalDate.now()): UndoToken = changeUndoably(
+        choreIds = { dao.getChores().map { it.toDomain() }.filter { it.status(today) is DueStatus.Overdue }.map { it.id } },
+        change = { rescheduleOverdue(today) },
+    )
+
+    /**
+     * Undoes a change: puts the chores back exactly as they were before it. Chores deleted by it
+     * are created again with their ids; a room deleted in the meantime is left out. Returns false,
+     * and changes nothing, when the chores were changed again since.
+     */
+    suspend fun undo(token: UndoToken): Boolean = db.withTransaction {
+        if (snapshot(token.choreIds) != token.after) return@withTransaction false
+        val before = token.before
+        val areas = backupDao.areaIds().toSet()
+        // Deleting cascades to dates, checklist, completions and missed periods.
+        backupDao.deleteChoresById(token.choreIds)
+        backupDao.insertChores(before.chores.map { if (it.areaId != null && it.areaId !in areas) it.copy(areaId = null) else it })
+        backupDao.insertDates(before.dates)
+        backupDao.insertChecklist(before.checklist)
+        backupDao.insertCompletions(before.completions)
+        backupDao.insertMissedPeriods(before.missedPeriods)
+        true
+    }
 
     /** Drops fields that don't apply to the schedule, so stored data stays consistent. */
     private fun normalize(schedule: Schedule, anchor: LocalDate): Schedule = when {

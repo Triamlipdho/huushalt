@@ -1,5 +1,6 @@
 package xyz.haselbach.huushalt.ui.settings
 
+import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -73,6 +74,7 @@ fun SettingsScreen(
     onOpenHoliday: () -> Unit,
     onOpenAreas: () -> Unit,
     onThemeChange: (ThemeMode) -> Unit = {},
+    onDynamicColorChange: (Boolean) -> Unit = {},
     onFirstDayChange: (DayOfWeek) -> Unit = {},
     onOpenCatalog: () -> Unit = {},
     onExport: () -> Unit = {},
@@ -181,6 +183,19 @@ fun SettingsScreen(
                 headlineContent = { Text(stringResource(R.string.settings_theme)) },
                 supportingContent = { Text(stringResource(themeLabel(settings.theme))) },
             )
+            // Colours from the wallpaper exist from Android 12 on.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                ListItem(
+                    modifier = Modifier.toggleable(
+                        value = settings.dynamicColor,
+                        role = Role.Switch,
+                        onValueChange = onDynamicColorChange,
+                    ),
+                    headlineContent = { Text(stringResource(R.string.settings_dynamic_color)) },
+                    supportingContent = { Text(stringResource(R.string.settings_dynamic_color_summary)) },
+                    trailingContent = { Switch(checked = settings.dynamicColor, onCheckedChange = null) },
+                )
+            }
             ListItem(
                 modifier = Modifier.clickable { choosing = Choice.FIRST_DAY },
                 headlineContent = { Text(stringResource(R.string.settings_first_day)) },

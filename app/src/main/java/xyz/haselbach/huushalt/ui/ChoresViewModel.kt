@@ -1,5 +1,6 @@
 package xyz.haselbach.huushalt.ui
 
+import android.database.sqlite.SQLiteException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
@@ -25,6 +26,7 @@ import kotlinx.coroutines.launch
 import xyz.haselbach.huushalt.HuushaltApplication
 import xyz.haselbach.huushalt.data.ChecklistDraft
 import xyz.haselbach.huushalt.data.ChoreRepository
+import xyz.haselbach.huushalt.data.UndoToken
 import xyz.haselbach.huushalt.data.CompletionEntity
 import xyz.haselbach.huushalt.data.CompletionWithName
 import xyz.haselbach.huushalt.data.toRecord
@@ -52,6 +54,8 @@ data class HomeState(
     val upcoming: List<Chore>,
     /** Chores done today, for the progress "x von y erledigt" (F7.1). */
     val doneToday: Int,
+    /** What was done today, newest last, so it can be seen and undone on the home screen. */
+    val doneTodayList: List<DoneToday> = emptyList(),
     /** Holiday mode right now (F10.1). */
     val activeHoliday: Holiday? = null,
     /** Next planned holiday, if any. */
@@ -62,6 +66,9 @@ data class HomeState(
     val open: Int get() = overdue.size + dueToday.size
     val total: Int get() = doneToday + open
 }
+
+/** A chore done today, with the completion to undo. */
+data class DoneToday(val chore: Chore, val completionId: Long)
 
 /** Streaks, statistics and the activity log (F6.3, F7.2 to F7.4). */
 data class ProgressState(
@@ -76,7 +83,24 @@ data class ProgressState(
 sealed interface UiEvent {
     /** [allDoneToday]: this was the last open chore of the day, time to celebrate (F7.5). */
     data class Completed(val choreName: String, val completionId: Long, val allDoneToday: Boolean) : UiEvent
+
+    /** A change that can be undone with [token]; shown as a snackbar with "Rückgängig". */
+    data class Changed(
+        val kind: ChangeKind,
+        val token: UndoToken,
+        val date: LocalDate? = null,
+        /** Undo is only possible while no import or "delete all" happened since. */
+        val generation: Int = 0,
+    ) : UiEvent {
+        val choreName: String get() = token.before.chores.firstOrNull()?.name.orEmpty()
+        val count: Int get() = token.before.chores.size
+    }
+
+    /** The chore was changed again after the change, so undoing it would lose that. */
+    data object UndoNotPossible : UiEvent
 }
+
+enum class ChangeKind { SKIPPED, POSTPONED, PAUSED, RESUMED, DELETED, COMPLETION_DELETED, COMPLETION_MOVED, RESCHEDULED, REOPENED }
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChoresViewModel(
@@ -93,7 +117,7 @@ class ChoresViewModel(
     val chores: StateFlow<List<Chore>?> = repository.chores
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    private val doneToday: Flow<Set<Long>> = _today.flatMapLatest { repository.choreIdsDoneOn(it) }
+    private val doneToday: Flow<List<CompletionEntity>> = _today.flatMapLatest { repository.completionsOn(it) }
 
     /** Home screen state; null while loading. */
     val home: StateFlow<HomeState?> = combine(repository.chores, doneToday, _today, repository.holidays) { chores, done, today, holidays ->
@@ -107,7 +131,10 @@ class ChoresViewModel(
             overdue = matching { it is DueStatus.Overdue },
             dueToday = matching { it == DueStatus.Today || it is DueStatus.InWindow },
             upcoming = matching { it is DueStatus.Upcoming },
-            doneToday = done.size,
+            doneToday = done.map { it.choreId }.toSet().size,
+            doneTodayList = done.groupBy { it.choreId }.mapNotNull { (choreId, list) ->
+                chores.find { it.id == choreId }?.let { DoneToday(it, list.last().id) }
+            },
             activeHoliday = holidays.firstOrNull { it.isActive(today) },
             plannedHoliday = holidays.firstOrNull { it.isPlanned(today) },
             datesRunningOut = chores.filter { chore ->
@@ -168,7 +195,10 @@ class ChoresViewModel(
 
     /** "Neu planen ab heute" (F10.6). */
     fun rescheduleOverdue() {
-        viewModelScope.launch { repository.rescheduleOverdue() }
+        viewModelScope.launch {
+            val token = repository.rescheduleOverdueUndoably()
+            if (token.before.chores.isNotEmpty()) events.send(UiEvent.Changed(ChangeKind.RESCHEDULED, token, generation = generation))
+        }
     }
 
     fun saveHoliday(id: Long?, start: LocalDate, end: LocalDate) {
@@ -193,9 +223,8 @@ class ChoresViewModel(
         viewModelScope.launch { repository.setChecked(itemId, checked) }
     }
 
-    fun setPaused(choreId: Long, paused: Boolean) {
-        viewModelScope.launch { repository.setPaused(choreId, paused) }
-    }
+    fun setPaused(choreId: Long, paused: Boolean) =
+        undoable(if (paused) ChangeKind.PAUSED else ChangeKind.RESUMED, choreId) { repository.setPaused(choreId, paused) }
 
     fun addArea(name: String) {
         viewModelScope.launch { repository.addArea(name) }
@@ -225,24 +254,51 @@ class ChoresViewModel(
     }
 
     /** Skips the current occurrence (F4.5). */
-    fun skip(choreId: Long) {
-        viewModelScope.launch { repository.skip(choreId) }
-    }
+    fun skip(choreId: Long) = undoable(ChangeKind.SKIPPED, choreId) { repository.skip(choreId) }
 
-    fun changeCompletionDate(completionId: Long, date: LocalDate) {
-        viewModelScope.launch { repository.changeCompletionDate(completionId, date) }
-    }
+    fun changeCompletionDate(choreId: Long, completionId: Long, date: LocalDate) =
+        undoable(ChangeKind.COMPLETION_MOVED, choreId, date) { repository.changeCompletionDate(completionId, date) }
 
-    fun deleteCompletion(completionId: Long) {
-        viewModelScope.launch { repository.deleteCompletion(completionId) }
-    }
+    fun deleteCompletion(choreId: Long, completionId: Long) =
+        undoable(ChangeKind.COMPLETION_DELETED, choreId) { repository.deleteCompletion(completionId) }
 
     fun undoCompletion(completionId: Long) {
         viewModelScope.launch { repository.undoCompletion(completionId) }
     }
 
-    fun postpone(choreId: Long, date: LocalDate) {
-        viewModelScope.launch { repository.postpone(choreId, date) }
+    fun postpone(choreId: Long, date: LocalDate) = undoable(ChangeKind.POSTPONED, choreId, date) { repository.postpone(choreId, date) }
+
+    /** Takes back today's completion from the home screen ("Heute erledigt"). */
+    fun reopen(choreId: Long, completionId: Long) =
+        undoable(ChangeKind.REOPENED, choreId) { repository.deleteCompletion(completionId) }
+
+    /** Counts imports and "delete all"; undo from before one of them is dropped. */
+    private var generation = 0
+
+    /** All data was replaced (import, delete all): pending undos no longer apply. */
+    fun forgetUndo() {
+        generation++
+    }
+
+    /** Undoes a [UiEvent.Changed], unless the chores were changed again since. */
+    fun undo(event: UiEvent.Changed) {
+        viewModelScope.launch {
+            val undone = event.generation == generation &&
+                try {
+                    repository.undo(event.token)
+                } catch (e: SQLiteException) {
+                    false
+                }
+            if (!undone) events.send(UiEvent.UndoNotPossible)
+        }
+    }
+
+    /** Runs [change] and offers to undo it, by restoring the chore as it was before. */
+    private fun undoable(kind: ChangeKind, choreId: Long, date: LocalDate? = null, change: suspend () -> Unit) {
+        viewModelScope.launch {
+            val token = repository.changeUndoably(choreId, change)
+            events.send(UiEvent.Changed(kind, token, date, generation))
+        }
     }
 
     fun save(
@@ -264,9 +320,7 @@ class ChoresViewModel(
         }
     }
 
-    fun delete(choreId: Long) {
-        viewModelScope.launch { repository.delete(choreId) }
-    }
+    fun delete(choreId: Long) = undoable(ChangeKind.DELETED, choreId) { repository.delete(choreId) }
 
     companion object {
         private const val RECENT_COUNT = 100

@@ -408,4 +408,47 @@
     <string name="color_pink">Rosa</string>
     <string name="color_purple">Violett</string>
     <string name="color_grey">Grau</string>
+
+    <!-- Snackbars with "Rückgängig" after a change -->
+    <string name="undo_skipped">«%s» übersprungen</string>
+    <string name="undo_postponed">«%1$s» verschoben auf %2$s</string>
+    <string name="undo_paused">«%s» pausiert</string>
+    <string name="undo_resumed">«%s» fortgesetzt</string>
+    <string name="undo_deleted">«%s» gelöscht</string>
+    <string name="undo_completion_deleted">Eintrag gelöscht</string>
+    <string name="undo_completion_moved">Eintrag verschoben auf %s</string>
+    <plurals name="undo_rescheduled">
+        <item quantity="one">%d Aufgabe neu geplant</item>
+        <item quantity="other">%d Aufgaben neu geplant</item>
+    </plurals>
+    <string name="discard_title">Änderungen verwerfen?</string>
+    <string name="discard_body">Was du geändert hast, wird nicht gespeichert.</string>
+    <string name="discard_confirm">Verwerfen</string>
+    <string name="discard_keep_editing">Weiter bearbeiten</string>
+    <string name="undo_reopened">«%s» wieder offen</string>
+    <string name="home_section_done">Heute erledigt (%d)</string>
+    <string name="home_section_done_show">Erledigte anzeigen</string>
+    <string name="home_section_done_hide">Erledigte ausblenden</string>
+    <string name="action_reopen_description">«%s» wieder als offen markieren</string>
+    <string name="done_today">Erledigt</string>
+    <string name="settings_dynamic_color">Farben vom Hintergrundbild</string>
+    <string name="settings_dynamic_color_summary">Statt dem Grün von huushalt die Farben deines Hintergrundbilds verwenden</string>
+    <string name="action_postpone_tomorrow_description">«%s» auf morgen verschieben</string>
+    <string name="action_more">Weitere Aktionen</string>
+    <string name="history_on_time">Pünktlich</string>
+    <plurals name="history_late">
+        <item quantity="one">%d Tag zu spät</item>
+        <item quantity="other">%d Tage zu spät</item>
+    </plurals>
+    <plurals name="history_gap">
+        <item quantity="one">%d Tag nach dem letzten Mal</item>
+        <item quantity="other">%d Tage nach dem letzten Mal</item>
+    </plurals>
+    <string name="edit_summary_next">Fällig am %s</string>
+    <string name="edit_delete">Aufgabe löschen</string>
+    <string name="stats_last_7">7 Tage</string>
+    <string name="stats_previous_7">Davor: %d</string>
+    <string name="stats_last_30">30 Tage</string>
+    <string name="stats_previous_30">Davor: %d</string>
+    <string name="undo_not_possible">Nicht mehr rückgängig zu machen, die Aufgabe wurde inzwischen geändert</string>
 </resources>

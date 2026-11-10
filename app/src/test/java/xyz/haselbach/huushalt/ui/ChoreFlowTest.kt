@@ -143,8 +143,8 @@ class ChoreFlowTest {
         compose.onNodeWithText("Fenster putzen").performClick()
         compose.onNodeWithContentDescription("Bearbeiten").performClick()
         // The editor appears once the checklist is loaded from the database.
-        compose.waitUntilAtLeastOneExists(hasContentDescription("Löschen"), timeoutMillis = 5_000)
-        compose.onNodeWithContentDescription("Löschen").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Aufgabe löschen"), timeoutMillis = 5_000)
+        compose.onNodeWithText("Aufgabe löschen").performScrollTo().performClick()
         waitFor("«Fenster putzen» löschen?")
         compose.onNodeWithText("Löschen").performClick()
         waitFor("Noch keine Aufgaben")

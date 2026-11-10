@@ -37,13 +37,14 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) handle(intent)
         val settings = (application as HuushaltApplication).settings.settings
         setContent {
-            val theme = settings.collectAsStateWithLifecycle(null).value?.theme ?: ThemeMode.SYSTEM
+            val current = settings.collectAsStateWithLifecycle(null).value
+            val theme = current?.theme ?: ThemeMode.SYSTEM
             val dark = when (theme) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
             }
-            HuushaltTheme(darkTheme = dark) {
+            HuushaltTheme(darkTheme = dark, dynamicColor = current?.dynamicColor ?: false) {
                 HuushaltApp(navRequest = navRequest.value)
             }
         }

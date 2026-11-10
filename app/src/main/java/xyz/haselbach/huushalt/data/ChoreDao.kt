@@ -36,6 +36,9 @@ interface ChoreDao {
     @Query("UPDATE completions SET doneDate = :doneDate WHERE id = :id")
     suspend fun updateCompletionDate(id: Long, doneDate: LocalDate)
 
+    @Query("SELECT * FROM completions WHERE doneDate = :date ORDER BY id")
+    fun observeCompletionsOn(date: LocalDate): Flow<List<CompletionEntity>>
+
     @Query("SELECT DISTINCT choreId FROM completions WHERE doneDate = :date")
     fun observeChoreIdsDoneOn(date: LocalDate): Flow<List<Long>>
 

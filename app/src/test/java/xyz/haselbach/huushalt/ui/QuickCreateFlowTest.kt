@@ -54,7 +54,7 @@ class QuickCreateFlowTest {
         compose.onNodeWithText("Lavabo").assertExists()
         compose.onNodeWithText("Speichern").performClick()
 
-        waitFor("Bad · 0/5")
+        waitFor("Bad\u00A0·\u00A00/5")
         compose.onNodeWithText("Bad putzen").assertExists()
     }
 
@@ -63,6 +63,7 @@ class QuickCreateFlowTest {
         runBlocking { app.repository.addFromTemplates(ChoreCatalog.templates.filter { it.name == "Bad putzen" }) }
         waitFor("Bad putzen")
         compose.onNodeWithText("Bad putzen").performClick()
+        compose.onNodeWithContentDescription("Weitere Aktionen").performClick()
         compose.onNodeWithText("Duplizieren").performClick()
         waitFor("Bad putzen (Kopie)")
         compose.onNodeWithText("Speichern").performClick()

@@ -1,5 +1,12 @@
 package xyz.haselbach.huushalt.ui.edit
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.filled.EventRepeat
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import xyz.haselbach.huushalt.ui.scheduleLabel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -44,6 +51,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -110,6 +119,8 @@ fun ChoreEditScreen(
     copyOf: Chore? = null,
     /** Names of existing chores; their catalogue suggestions are not offered again. */
     existingNames: Set<String> = emptySet(),
+    /** Counts presses of the system back button; each one is handled like the close button. */
+    backRequests: Int = 0,
 ) {
     // Values come from the chore being edited, or the one being copied.
     val source = chore ?: copyOf
@@ -163,6 +174,22 @@ fun ChoreEditScreen(
     val checklist = rememberSaveable(saver = checklistSaver) {
         // A copy gets new checklist items (no ids), the edited chore keeps its own.
         initialChecklist.map { ChecklistDraft(if (chore != null) it.id else null, it.text) }.toMutableStateList()
+    }
+
+    // Everything the form holds, to tell whether leaving would lose changes.
+    val formState = listOf(
+        name, notes, repeat, unit, intervalText, weekdayMask, dueEpochDay, monthlyRule, dateList.toList(),
+        toleranceDays, symbolKey, colorKey, areaId, newAreaName, checklist.toList(),
+    ).toString()
+    val initialFormState by rememberSaveable { mutableStateOf(formState) }
+    val hasChanges = formState != initialFormState
+    var showDiscardConfirm by rememberSaveable { mutableStateOf(false) }
+    fun close() {
+        if (hasChanges) showDiscardConfirm = true else onClose()
+    }
+    val handledBackRequests = remember { backRequests }
+    LaunchedEffect(backRequests) {
+        if (backRequests != handledBackRequests) close()
     }
 
     /** Quick create: fill the form from a catalogue suggestion. */
@@ -238,16 +265,11 @@ fun ChoreEditScreen(
             TopAppBar(
                 title = { Text(stringResource(if (chore == null) R.string.edit_title_new else R.string.edit_title_edit)) },
                 navigationIcon = {
-                    IconButton(onClick = onClose) {
+                    IconButton(onClick = ::close) {
                         Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_cancel))
                     }
                 },
                 actions = {
-                    if (chore != null) {
-                        IconButton(onClick = { showDeleteConfirm = true }) {
-                            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.action_delete))
-                        }
-                    }
                     TextButton(onClick = ::save) { Text(stringResource(R.string.action_save)) }
                 },
             )
@@ -319,6 +341,30 @@ fun ChoreEditScreen(
             }
 
             Text(stringResource(R.string.edit_repeat), style = MaterialTheme.typography.titleSmall)
+            // The schedule in one sentence, updated while editing.
+            if (scheduleError == null) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Filled.EventRepeat, contentDescription = null)
+                        Column {
+                            Text(scheduleLabel(schedule, if (schedule.isRepeating) toleranceDays else 0, today), style = MaterialTheme.typography.bodyLarge)
+                            adjustedDue?.let {
+                                Text(stringResource(R.string.edit_summary_next, it.formatLong()), style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+                }
+            }
             Column(Modifier.selectableGroup()) {
                 RepeatOption(repeat == Repeat.ONCE, R.string.edit_repeat_once, R.string.edit_repeat_once_help) {
                     repeat = Repeat.ONCE
@@ -335,21 +381,22 @@ fun ChoreEditScreen(
 
             if (repeat != Repeat.ONCE) {
                 val intervalError = showErrors && scheduleError == ScheduleError.INTERVAL_OUT_OF_RANGE
-                if (!isDateList) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.edit_every))
-                    OutlinedTextField(
-                        value = intervalText,
-                        onValueChange = { text -> intervalText = text.filter(Char::isDigit).take(3) },
-                        singleLine = true,
-                        isError = intervalError,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.width(80.dp),
-                    )
-                }
-                if (intervalError) {
-                    Text(stringResource(R.string.edit_error_interval), color = MaterialTheme.colorScheme.error)
-                }
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // "Alle [2] [Tage | Wochen | Monate]" on one line where it fits.
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    itemVerticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (!isDateList) {
+                        Text(stringResource(R.string.edit_every))
+                        OutlinedTextField(
+                            value = intervalText,
+                            onValueChange = { text -> intervalText = text.filter(Char::isDigit).take(3) },
+                            singleLine = true,
+                            isError = intervalError,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.width(72.dp),
+                        )
+                    }
                     listOfNotNull(
                         RepeatUnit.DAYS to R.string.edit_unit_days,
                         RepeatUnit.WEEKS to R.string.edit_unit_weeks,
@@ -365,6 +412,9 @@ fun ChoreEditScreen(
                             label = { Text(stringResource(label)) },
                         )
                     }
+                }
+                if (intervalError) {
+                    Text(stringResource(R.string.edit_error_interval), color = MaterialTheme.colorScheme.error)
                 }
                 if (repeat == Repeat.FIXED && unit == RepeatUnit.WEEKS) {
                     Text(stringResource(R.string.edit_weekdays), style = MaterialTheme.typography.titleSmall)
@@ -489,6 +539,20 @@ fun ChoreEditScreen(
                 Icon(Icons.Filled.Add, contentDescription = null)
                 Text(stringResource(R.string.checklist_add), modifier = Modifier.padding(start = 8.dp))
             }
+
+            // Deleting is at the end of the form, far away from "Speichern".
+            if (chore != null) {
+                HorizontalDivider()
+                OutlinedButton(
+                    onClick = { showDeleteConfirm = true },
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Filled.Delete, contentDescription = null)
+                    Text(stringResource(R.string.edit_delete), modifier = Modifier.padding(start = 8.dp))
+                }
+            }
         }
     }
 
@@ -528,6 +592,23 @@ fun ChoreEditScreen(
             onConfirm = {
                 if (it.toEpochDay() !in dateList) dateList.add(it.toEpochDay())
                 showDateListPicker = false
+            },
+        )
+    }
+
+    if (showDiscardConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDiscardConfirm = false },
+            title = { Text(stringResource(R.string.discard_title)) },
+            text = { Text(stringResource(R.string.discard_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDiscardConfirm = false
+                    onClose()
+                }) { Text(stringResource(R.string.discard_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardConfirm = false }) { Text(stringResource(R.string.discard_keep_editing)) }
             },
         )
     }
@@ -650,7 +731,10 @@ private fun RepeatOption(selected: Boolean, title: Int, help: Int, onSelect: () 
         RadioButton(selected = selected, onClick = null)
         Column(Modifier.padding(start = 12.dp)) {
             Text(stringResource(title), style = MaterialTheme.typography.bodyLarge)
-            Text(stringResource(help), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // Only the chosen option is explained, so the list stays short.
+            if (selected) {
+                Text(stringResource(help), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }

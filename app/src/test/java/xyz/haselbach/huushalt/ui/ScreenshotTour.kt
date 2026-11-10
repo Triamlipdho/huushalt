@@ -87,9 +87,10 @@ abstract class ScreenshotTourBase(private val variant: String, private val theme
         waitFor("Checkliste")
         shot("05-detail")
         compose.onNodeWithContentDescription("Bearbeiten").performClick()
-        compose.waitUntilAtLeastOneExists(hasContentDescriptionText("Löschen"), timeoutMillis = 5_000)
+        compose.waitUntilAtLeastOneExists(hasText("Aufgabe löschen"), timeoutMillis = 5_000)
         shot("06-editor")
         compose.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        compose.waitForIdle()
         compose.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
         compose.onNodeWithContentDescription("Neue Aufgabe").performClick()
         waitFor("Neue Aufgabe")
