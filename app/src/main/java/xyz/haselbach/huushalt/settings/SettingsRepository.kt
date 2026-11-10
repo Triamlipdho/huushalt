@@ -7,12 +7,14 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import java.time.DayOfWeek
 import java.time.LocalTime
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import xyz.haselbach.huushalt.domain.IntervalSuggestion
 
 /** Reminder settings (F5.1, F5.2, F5.7, F5.8). */
 data class ReminderSettings(
@@ -38,6 +40,8 @@ data class AppSettings(
     val dynamicColor: Boolean = false,
     /** Start of the week for statistics and weekday lists (F9.4). */
     val firstDayOfWeek: DayOfWeek = DayOfWeek.MONDAY,
+    /** Interval suggestions answered with "Nein danke", as [IntervalSuggestion.key]s (F2.13). */
+    val dismissedIntervalSuggestions: Set<String> = emptySet(),
 )
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
@@ -66,6 +70,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             prefs[THEME] = new.theme.name
             prefs[DYNAMIC_COLOR] = new.dynamicColor
             prefs[FIRST_DAY_OF_WEEK] = new.firstDayOfWeek.value
+            prefs[DISMISSED_INTERVAL_SUGGESTIONS] = new.dismissedIntervalSuggestions
         }
     }
 
@@ -81,6 +86,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val THEME = stringPreferencesKey("theme")
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val FIRST_DAY_OF_WEEK = intPreferencesKey("first_day_of_week")
+        val DISMISSED_INTERVAL_SUGGESTIONS = stringSetPreferencesKey("dismissed_interval_suggestions")
 
         fun Preferences.toSettings(): AppSettings {
             val defaults = ReminderSettings()
@@ -98,6 +104,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
                 theme = this[THEME]?.let { name -> ThemeMode.entries.find { it.name == name } } ?: ThemeMode.SYSTEM,
                 dynamicColor = this[DYNAMIC_COLOR] ?: false,
                 firstDayOfWeek = this[FIRST_DAY_OF_WEEK]?.let { DayOfWeek.of(it) } ?: DayOfWeek.MONDAY,
+                dismissedIntervalSuggestions = this[DISMISSED_INTERVAL_SUGGESTIONS] ?: emptySet(),
             )
         }
 

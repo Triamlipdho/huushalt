@@ -288,6 +288,24 @@ class ChoreRepository(
 
     suspend fun delete(choreId: Long) = dao.deleteChore(choreId)
 
+    /**
+     * Changes the interval of a flexible chore, e.g. after accepting a suggestion (F2.13); all other
+     * settings stay. When the due date was counted from the last completion, it is counted again
+     * with the new interval; a postponed due date is kept.
+     */
+    suspend fun setInterval(choreId: Long, interval: Int) = db.withTransaction {
+        val chore = dao.getChore(choreId) ?: return@withTransaction
+        val flexible = chore.mode == ScheduleMode.FLEXIBLE && chore.unit in setOf(RepeatUnit.DAYS, RepeatUnit.WEEKS, RepeatUnit.MONTHS)
+        if (!flexible || interval !in Schedule.INTERVAL_RANGE || interval == chore.interval) return@withTransaction
+        val changed = chore.copy(interval = interval)
+        val lastDone = dao.getLatestCompletion(choreId)?.doneDate
+        fun dueAfterLastDone(entity: ChoreEntity) = lastDone?.let {
+            ScheduleCalculator.dueDateAfterCompletion(entity.schedule(), entity.anchorDate, entity.dueDate, it)
+        }
+        val dueDate = if (lastDone != null && chore.dueDate == dueAfterLastDone(chore)) dueAfterLastDone(changed) else chore.dueDate
+        dao.updateChore(changed.copy(dueDate = dueDate))
+    }
+
     /** Everything stored about these chores right now. */
     private suspend fun snapshot(choreIds: List<Long>): ChoreSnapshot = ChoreSnapshot(
         chores = backupDao.choresById(choreIds).sortedBy { it.id },
