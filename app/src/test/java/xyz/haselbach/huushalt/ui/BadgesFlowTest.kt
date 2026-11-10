@@ -101,6 +101,27 @@ class BadgesFlowTest {
     }
 
     @Test
+    fun anUndoneCompletionAnnouncesNoBadgeAndTheBadgeComesLater() {
+        waitFor("Noch keine Aufgaben")
+        compose.onNodeWithContentDescription("Neue Aufgabe").performClick()
+        compose.onNodeWithText("Name").performTextInput("Staubsaugen")
+        compose.onNodeWithText("Speichern").performClick()
+        waitFor("0 von 1 erledigt")
+        compose.onNodeWithContentDescription("«Staubsaugen» als erledigt markieren").performClick()
+        waitFor("Alles erledigt für heute 🎉")
+        compose.onNodeWithText("Rückgängig").performClick()
+        waitFor("0 von 1 erledigt")
+        // No badge for a completion that was taken back.
+        compose.mainClock.advanceTimeBy(4_000)
+        compose.waitForIdle()
+        compose.onNodeWithText("Neues Abzeichen", substring = true).assertDoesNotExist()
+
+        // Done for real: now it is announced.
+        compose.onNodeWithContentDescription("«Staubsaugen» als erledigt markieren").performClick()
+        waitFor("Neues Abzeichen: Der erste Schritt 🏅", timeout = 15_000)
+    }
+
+    @Test
     fun progressShowsBadgesAndRooms() {
         seed()
         waitFor("Kühlschrank putzen")

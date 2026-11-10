@@ -76,6 +76,8 @@ class OrganizeFlowTest {
     fun tickingTheLastItemCompletesTheChore() {
         waitFor("Noch keine Aufgaben")
         createChore("Bad putzen", checklist = listOf("Lavabo", "WC"))
+        // Wait for the row on Heute; the editor may still be animating out.
+        waitFor("Heute fällig")
         compose.onNodeWithText("Bad putzen").performClick()
         waitFor("Checkliste 0/2")
         compose.onNodeWithText("Lavabo").performClick()

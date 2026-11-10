@@ -214,9 +214,16 @@ fun HuushaltApp(
     val appSettings = settings ?: return
     val progressState = progress ?: return
     val allAreas = areas ?: return
+    val allHolidays by viewModel.holidays.collectAsStateWithLifecycle()
 
     // "Neues Abzeichen" once per badge (F7.7).
-    AnnounceNewBadges(progressState.badges, appSettings.announcedBadges, appSettings.motivationEnabled, snackbarHostState) { ids ->
+    AnnounceNewBadges(
+        progressState.badges,
+        appSettings.announcedBadges,
+        appSettings.motivationEnabled,
+        snackbarHostState,
+        onForget = { ids -> settingsViewModel.update { it.copy(announcedBadges = it.announcedBadges.orEmpty() - ids) } },
+    ) { ids ->
         settingsViewModel.update { it.copy(announcedBadges = it.announcedBadges.orEmpty() + ids) }
     }
 
@@ -296,7 +303,7 @@ fun HuushaltApp(
                         chores = allChores,
                         showAreaSort = allAreas.isNotEmpty(),
                         firstDayOfWeek = appSettings.firstDayOfWeek,
-                        holidays = listOfNotNull(homeState.activeHoliday, homeState.plannedHoliday),
+                        holidays = allHolidays,
                         today = today,
                         contentPadding = padding,
                         onOpen = { open(Route.detail(it.id)) },

@@ -218,6 +218,9 @@ fun AreaStatsSection(counts: List<AreaCount>, areas: List<Area>) {
 /** Gives the "erledigt – Rückgängig" snackbar time to come first; the badge then waits for it to end. */
 private const val ANNOUNCE_DELAY_MS = 700L
 
+/** Time for an undo tapped on that snackbar to reach the database and the badges. */
+private const val SETTLE_DELAY_MS = 1_000L
+
 /**
  * Announces newly earned badges once with a snackbar (F7.7). [announced] is what was announced
  * before (null: never checked, then everything earned so far is remembered silently);
@@ -229,6 +232,8 @@ fun AnnounceNewBadges(
     announced: Set<String>?,
     motivationEnabled: Boolean,
     snackbarHostState: SnackbarHostState,
+    /** Removes ids again: the completion that earned them was undone before they were shown. */
+    onForget: (Set<String>) -> Unit = {},
     onRemember: (Set<String>) -> Unit,
 ) {
     // Not the effect's scope: the effect restarts once the ids are saved, the snackbar must stay.
@@ -236,6 +241,7 @@ fun AnnounceNewBadges(
     val resources = LocalContext.current.resources
     val motivation by rememberUpdatedState(motivationEnabled)
     val save by rememberUpdatedState(onRemember)
+    val forget by rememberUpdatedState(onForget)
     val current by rememberUpdatedState(badges)
     // Saving takes a moment; this keeps a badge from being announced twice meanwhile.
     val shown = remember { HashSet<String>() }
@@ -247,17 +253,27 @@ fun AnnounceNewBadges(
         shown += announcement.remember
         save(announcement.remember)
         if (!motivation || new.isEmpty()) return@LaunchedEffect
-        val message = if (new.size == 1) {
-            resources.getString(R.string.snackbar_new_badge, resources.badgeTitle(new.single()))
-        } else {
-            resources.getQuantityString(R.plurals.snackbar_new_badges, new.size, new.size)
-        }
         scope.launch {
-            // After the "erledigt" snackbar, and only if that wasn't undone meanwhile.
+            // After the "erledigt" snackbar, and only if that wasn't undone meanwhile. An undo
+            // tapped just now takes a moment to reach the badges, hence the second wait.
             delay(ANNOUNCE_DELAY_MS)
             snapshotFlow { snackbarHostState.currentSnackbarData }.first { it == null }
-            val stillEarned = current.filter { it.earned }.map { it.id }
-            if (new.any { it.id in stillEarned }) snackbarHostState.showSnackbar(message)
+            delay(SETTLE_DELAY_MS)
+            val stillEarned = current.filter { it.earned }.map { it.id }.toSet()
+            val (keep, gone) = new.partition { it.id in stillEarned }
+            if (gone.isNotEmpty()) {
+                // Earned again later, they are announced then.
+                val ids = gone.map { it.id }.toSet()
+                shown -= ids
+                forget(ids)
+            }
+            if (keep.isEmpty()) return@launch
+            val message = if (keep.size == 1) {
+                resources.getString(R.string.snackbar_new_badge, resources.badgeTitle(keep.single()))
+            } else {
+                resources.getQuantityString(R.plurals.snackbar_new_badges, keep.size, keep.size)
+            }
+            snackbarHostState.showSnackbar(message)
         }
     }
 }

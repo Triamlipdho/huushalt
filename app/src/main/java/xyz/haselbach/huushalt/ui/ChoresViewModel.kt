@@ -249,6 +249,9 @@ class ChoresViewModel(
 
     fun checklist(choreId: Long): Flow<List<ChecklistItem>> = repository.checklist(choreId)
 
+    /** All holidays, active, planned and past, for the week forecast (F3.6). */
+    val holidays: StateFlow<List<Holiday>> = repository.holidays.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     val areas: StateFlow<List<Area>?> = repository.areas.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     fun setChecked(itemId: Long, checked: Boolean) {
@@ -260,16 +263,15 @@ class ChoresViewModel(
      * done (F1.9); undo then ticks the other items again, so only the last one is open.
      */
     fun toggleChecklistItem(chore: Chore, item: ChecklistItem, checklist: List<ChecklistItem>) {
-        val checked = !item.checked
-        val others = checklist.filter { it.id != item.id }
-        val completes = checked && others.all { it.checked } && !chore.paused && !chore.isFinished
-        if (!completes) {
-            setChecked(item.id, checked)
+        if (item.checked) {
+            setChecked(item.id, false)
             return
         }
         viewModelScope.launch {
-            repository.setChecked(item.id, true)
-            complete(chore, recheckOnUndo = others.map { it.id })
+            val today = LocalDate.now()
+            val wasOpen = chore.status(today) is DueStatus.Overdue || chore.isDueNow(today)
+            val completionId = repository.tickChecklistItem(chore.id, item.id, today) ?: return@launch
+            announceCompletion(chore, completionId, wasOpen, recheckOnUndo = checklist.filter { it.id != item.id }.map { it.id })
         }
     }
 
@@ -298,9 +300,14 @@ class ChoresViewModel(
             val today = LocalDate.now()
             val wasOpen = chore.status(today) is DueStatus.Overdue || chore.isDueNow(today)
             val completionId = repository.complete(chore.id, date) ?: return
-            val allDone = wasOpen && OpenChores.of(repository.chores.first(), today).isEmpty
-            events.send(UiEvent.Completed(chore.name, completionId, allDone, recheckOnUndo))
+            announceCompletion(chore, completionId, wasOpen, recheckOnUndo)
         }
+    }
+
+    /** Snackbar "erledigt – Rückgängig", or the celebration when it was the last open chore (F7.5). */
+    private suspend fun announceCompletion(chore: Chore, completionId: Long, wasOpen: Boolean, recheckOnUndo: List<Long>) {
+        val allDone = wasOpen && OpenChores.of(repository.chores.first(), LocalDate.now()).isEmpty
+        events.send(UiEvent.Completed(chore.name, completionId, allDone, recheckOnUndo))
     }
 
     fun addFromTemplates(templates: List<ChoreTemplate>) {
@@ -354,6 +361,9 @@ class ChoresViewModel(
     private fun undoable(kind: ChangeKind, choreId: Long, date: LocalDate? = null, change: suspend () -> Unit) {
         viewModelScope.launch {
             val token = repository.changeUndoably(choreId, change)
+            // Nothing changed (e.g. a second tap on a button that already did it): nothing to undo,
+            // and a snackbar for it would replace the one that can undo the real change.
+            if (token.before == token.after) return@launch
             events.send(UiEvent.Changed(kind, token, date, generation))
         }
     }

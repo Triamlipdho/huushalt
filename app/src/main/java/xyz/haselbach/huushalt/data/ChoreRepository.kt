@@ -116,6 +116,26 @@ class ChoreRepository(
 
     suspend fun setChecked(itemId: Long, checked: Boolean) = dao.setChecklistItemChecked(itemId, checked)
 
+    /**
+     * Ticks a checklist item; when that was the last open one of an open chore, the chore is done
+     * (F1.9). One transaction reads and writes, so quick double taps can't complete it twice.
+     * Returns the new completion's id, or null when the chore was not completed.
+     */
+    suspend fun tickChecklistItem(choreId: Long, itemId: Long, today: LocalDate = LocalDate.now()): Long? = db.withTransaction {
+        val items = dao.getChecklist(choreId)
+        val item = items.find { it.id == itemId } ?: return@withTransaction null
+        if (item.checked) return@withTransaction null
+        // Completing resets the checklist, so a quick second tap would tick it again and complete
+        // the chore a second time: ignore taps right after a completion.
+        val last = dao.getLatestCompletion(choreId)
+        if (last != null && now() - last.createdAt in 0 until DOUBLE_TAP_MILLIS) return@withTransaction null
+        dao.setChecklistItemChecked(itemId, true)
+        val chore = dao.getChore(choreId) ?: return@withTransaction null
+        val allTicked = items.all { it.id == itemId || it.checked }
+        if (!allTicked || chore.paused || chore.dueDate == null) return@withTransaction null
+        complete(choreId, today)
+    }
+
     /** Ticks several checklist items again, e.g. when a completion is undone (F1.9). */
     suspend fun setChecked(itemIds: List<Long>) = db.withTransaction {
         itemIds.forEach { dao.setChecklistItemChecked(it, true) }
@@ -291,9 +311,10 @@ class ChoreRepository(
     /**
      * Changes the interval of a flexible chore, e.g. after accepting a suggestion (F2.13); all other
      * settings stay. When the due date was counted from the last completion, it is counted again
-     * with the new interval; a postponed due date is kept.
+     * with the new interval, but never earlier than [today]: a shorter interval must not make the
+     * chore overdue for days that already went by (and break a streak). A postponed due date is kept.
      */
-    suspend fun setInterval(choreId: Long, interval: Int) = db.withTransaction {
+    suspend fun setInterval(choreId: Long, interval: Int, today: LocalDate = LocalDate.now()) = db.withTransaction {
         val chore = dao.getChore(choreId) ?: return@withTransaction
         val flexible = chore.mode == ScheduleMode.FLEXIBLE && chore.unit in setOf(RepeatUnit.DAYS, RepeatUnit.WEEKS, RepeatUnit.MONTHS)
         if (!flexible || interval !in Schedule.INTERVAL_RANGE || interval == chore.interval) return@withTransaction
@@ -302,7 +323,11 @@ class ChoreRepository(
         fun dueAfterLastDone(entity: ChoreEntity) = lastDone?.let {
             ScheduleCalculator.dueDateAfterCompletion(entity.schedule(), entity.anchorDate, entity.dueDate, it)
         }
-        val dueDate = if (lastDone != null && chore.dueDate == dueAfterLastDone(chore)) dueAfterLastDone(changed) else chore.dueDate
+        val dueDate = if (lastDone != null && chore.dueDate == dueAfterLastDone(chore)) {
+            dueAfterLastDone(changed)?.let { maxOf(it, today) }
+        } else {
+            chore.dueDate
+        }
         dao.updateChore(changed.copy(dueDate = dueDate))
     }
 
@@ -389,6 +414,9 @@ class ChoreRepository(
 
 /** A checklist item as edited in the editor: [id] null for new items. */
 data class ChecklistDraft(val id: Long?, val text: String)
+
+/** Taps on a checklist this soon after a completion are taken as a double tap (F1.9). */
+private const val DOUBLE_TAP_MILLIS = 2_000L
 
 /** The tolerance window can be at most a week (F2.12). */
 const val MAX_TOLERANCE_DAYS = 7
