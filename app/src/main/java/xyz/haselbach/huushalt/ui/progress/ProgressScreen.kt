@@ -31,6 +31,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import java.time.format.DateTimeFormatter
 import xyz.haselbach.huushalt.R
+import xyz.haselbach.huushalt.domain.Area
 import xyz.haselbach.huushalt.domain.Stats
 import xyz.haselbach.huushalt.domain.Streaks
 import xyz.haselbach.huushalt.ui.ProgressState
@@ -40,18 +41,23 @@ import xyz.haselbach.huushalt.ui.formatLong
 
 private val weekLabel = DateTimeFormatter.ofPattern("dd.MM.")
 
-/** Streaks, statistics and everything done recently (F6.3, F7.2, F7.4). */
+/** Streaks, statistics, badges and everything done recently (F6.3, F7.2, F7.4, F7.7, F7.8). */
 @Composable
 fun ProgressScreen(
     state: ProgressState,
     motivationEnabled: Boolean,
     contentPadding: PaddingValues,
     onOpenChore: (Long) -> Unit,
+    areas: List<Area> = emptyList(),
 ) {
     LazyColumn(contentPadding = contentPadding) {
         if (motivationEnabled) item(key = "streak") { StreakCard(state.streaks) }
         item(key = "stats") { StatsCards(state.stats) }
         item(key = "chart") { WeekChart(state.stats) }
+        if (areas.isNotEmpty() && state.areaCounts.any { it.areaId != null }) {
+            item(key = "areas") { AreaStatsSection(state.areaCounts, areas) }
+        }
+        if (motivationEnabled) item(key = "badges") { BadgesSection(state.badges) }
         item(key = "activity-header") { SectionHeader(stringResource(R.string.stats_activity)) }
         if (state.recent.isEmpty()) {
             item(key = "activity-empty") {

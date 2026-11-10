@@ -75,8 +75,10 @@ import xyz.haselbach.huushalt.ui.chores.AllChoresScreen
 import xyz.haselbach.huushalt.ui.detail.ChoreDetailScreen
 import xyz.haselbach.huushalt.ui.edit.ChoreEditScreen
 import xyz.haselbach.huushalt.ui.components.PermissionCard
+import xyz.haselbach.huushalt.ui.components.everyLabel
 import xyz.haselbach.huushalt.ui.holiday.HolidayScreen
 import xyz.haselbach.huushalt.ui.home.HomeScreen
+import xyz.haselbach.huushalt.ui.progress.AnnounceNewBadges
 import xyz.haselbach.huushalt.ui.progress.ProgressScreen
 import xyz.haselbach.huushalt.ui.settings.SettingsScreen
 import xyz.haselbach.huushalt.ui.settings.SettingsViewModel
@@ -120,6 +122,7 @@ fun HuushaltApp(
     val home by viewModel.home.collectAsStateWithLifecycle()
     val progress by viewModel.progress.collectAsStateWithLifecycle()
     val areas by viewModel.areas.collectAsStateWithLifecycle()
+    val intervalSuggestions by viewModel.intervalSuggestions.collectAsStateWithLifecycle()
     // A chore with an unfinished checklist waiting for "Trotzdem erledigt?" (F1.8).
     var confirmCompleteId by rememberSaveable { mutableStateOf<Long?>(null) }
     val today by viewModel.today.collectAsStateWithLifecycle()
@@ -184,7 +187,7 @@ fun HuushaltApp(
                             actionLabel = undoText,
                             duration = SnackbarDuration.Short,
                         )
-                        if (result == SnackbarResult.ActionPerformed) viewModel.undoCompletion(event.completionId)
+                        if (result == SnackbarResult.ActionPerformed) viewModel.undoCompletion(event.completionId, event.recheckOnUndo)
                     }
                 }
                 is UiEvent.Changed -> {
@@ -211,6 +214,18 @@ fun HuushaltApp(
     val appSettings = settings ?: return
     val progressState = progress ?: return
     val allAreas = areas ?: return
+    val allHolidays by viewModel.holidays.collectAsStateWithLifecycle()
+
+    // "Neues Abzeichen" once per badge (F7.7).
+    AnnounceNewBadges(
+        progressState.badges,
+        appSettings.announcedBadges,
+        appSettings.motivationEnabled,
+        snackbarHostState,
+        onForget = { ids -> settingsViewModel.update { it.copy(announcedBadges = it.announcedBadges.orEmpty() - ids) } },
+    ) { ids ->
+        settingsViewModel.update { it.copy(announcedBadges = it.announcedBadges.orEmpty() + ids) }
+    }
 
     fun complete(chore: Chore) {
         if (chore.checklistUnfinished) confirmCompleteId = chore.id else viewModel.complete(chore)
@@ -270,6 +285,9 @@ fun HuushaltApp(
                         onOpenCatalog = { open(Route.CATALOG) },
                         onReopen = { viewModel.reopen(it.chore.id, it.completionId) },
                         onPostponeToTomorrow = { viewModel.postpone(it.id, today.plusDays(1)) },
+                        intervalSuggestions = intervalSuggestions.values.mapNotNull { suggestion ->
+                            allChores.find { it.id == suggestion.choreId }?.let { it to suggestion }
+                        },
                         header = {
                             if (showPermissionCard) {
                                 PermissionCard(
@@ -284,6 +302,8 @@ fun HuushaltApp(
                     AllChoresScreen(
                         chores = allChores,
                         showAreaSort = allAreas.isNotEmpty(),
+                        firstDayOfWeek = appSettings.firstDayOfWeek,
+                        holidays = allHolidays,
                         today = today,
                         contentPadding = padding,
                         onOpen = { open(Route.detail(it.id)) },
@@ -295,6 +315,7 @@ fun HuushaltApp(
                         motivationEnabled = appSettings.motivationEnabled,
                         contentPadding = padding,
                         onOpenChore = { open(Route.detail(it)) },
+                        areas = allAreas,
                     )
                 }
             }
@@ -323,7 +344,7 @@ fun HuushaltApp(
                     onDeleteCompletion = { completionId -> viewModel.deleteCompletion(id, completionId) },
                     streak = progressState.choreStreaks[id].takeIf { appSettings.motivationEnabled },
                     checklist = checklist,
-                    onToggleItem = { viewModel.setChecked(it.id, !it.checked) },
+                    onToggleItem = { viewModel.toggleChecklistItem(chore, it, checklist) },
                     onPausedChange = { viewModel.setPaused(id, it) },
                     onCompleteOn = { date -> viewModel.complete(chore, date) },
                     onSkip = { viewModel.skip(id) },
@@ -331,6 +352,13 @@ fun HuushaltApp(
                     onDelete = {
                         viewModel.delete(id)
                         backToTab()
+                    },
+                    intervalSuggestion = intervalSuggestions[id],
+                    onAcceptSuggestion = { intervalSuggestions[id]?.let(viewModel::acceptIntervalSuggestion) },
+                    onDismissSuggestion = {
+                        intervalSuggestions[id]?.let { suggestion ->
+                            settingsViewModel.update { it.copy(dismissedIntervalSuggestions = it.dismissedIntervalSuggestions + suggestion.key) }
+                        }
                     },
                 )
             }
@@ -522,6 +550,11 @@ private fun changeMessage(res: Resources, event: UiEvent.Changed): String = when
     ChangeKind.COMPLETION_MOVED -> res.getString(R.string.undo_completion_moved, event.date?.formatShort().orEmpty())
     ChangeKind.REOPENED -> res.getString(R.string.undo_reopened, event.choreName)
     ChangeKind.RESCHEDULED -> res.getQuantityString(R.plurals.undo_rescheduled, event.count, event.count)
+    ChangeKind.INTERVAL_CHANGED -> res.getString(
+        R.string.undo_interval_changed,
+        event.choreName,
+        event.token.after.chores.firstOrNull()?.let { res.everyLabel(it.interval, it.unit) }.orEmpty(),
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

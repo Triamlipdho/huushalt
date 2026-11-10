@@ -58,4 +58,29 @@ class ChoreRepositoryTest {
         assertEquals(day.plusWeeks(1), due(id))
         assertEquals(emptyList<CompletionEntity>(), repo.completions(id).first())
     }
+
+    @Test
+    fun `a shorter interval never makes a chore overdue in the past`() = runBlocking {
+        val today = LocalDate.now()
+        val fourWeeks = Schedule(ScheduleMode.FLEXIBLE, RepeatUnit.WEEKS, 4)
+        val id = repo.save(null, "Kühlschrank putzen", "", fourWeeks, today.minusDays(25))
+        repo.complete(id, today.minusDays(25))
+
+        // Counted from the last time it would be 4 days ago; it is due today instead.
+        repo.setInterval(id, 3, today)
+        assertEquals(today, due(id))
+    }
+
+    @Test
+    fun `ticking the last checklist item twice completes the chore once`() = runBlocking {
+        val today = LocalDate.now()
+        val id = repo.save(null, "Bad putzen", "", weekly, today, checklist = listOf(ChecklistDraft(null, "WC")))
+        val item = repo.checklist(id).first().single()
+
+        val first = repo.tickChecklistItem(id, item.id, today)
+        val second = repo.tickChecklistItem(id, item.id, today)
+        assertEquals(1, repo.completions(id).first().size)
+        assertEquals(null, second)
+        assertEquals(true, first != null)
+    }
 }

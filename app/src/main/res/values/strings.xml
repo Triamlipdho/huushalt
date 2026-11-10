@@ -451,4 +451,89 @@
     <string name="stats_last_30">30 Tage</string>
     <string name="stats_previous_30">Davor: %d</string>
     <string name="undo_not_possible">Nicht mehr rückgängig zu machen, die Aufgabe wurde inzwischen geändert</string>
+    <!-- F2.13 interval suggestions -->
+    <plurals name="suggestion_every_days">
+        <item quantity="one">jeden Tag</item>
+        <item quantity="other">alle %d Tage</item>
+    </plurals>
+    <plurals name="suggestion_every_weeks">
+        <item quantity="one">jede Woche</item>
+        <item quantity="other">alle %d Wochen</item>
+    </plurals>
+    <plurals name="suggestion_every_months">
+        <item quantity="one">jeden Monat</item>
+        <item quantity="other">alle %d Monate</item>
+    </plurals>
+    <string name="suggestion_title">Vorschlag</string>
+    <!-- %1$s: how often it is really done, %2$s: the current interval, e.g. "alle 3 Wochen", "alle 4 Wochen" -->
+    <string name="suggestion_body">Du machst das etwa %1$s statt %2$s. Anpassen?</string>
+    <string name="suggestion_accept">Übernehmen</string>
+    <string name="suggestion_dismiss">Nein danke</string>
+    <!-- Home screen hint. %1$s: chore name, %2$s: e.g. "alle 3 Wochen" -->
+    <string name="suggestion_home">Vorschlag für «%1$s»: %2$s</string>
+    <plurals name="suggestion_home_more">
+        <item quantity="one">und %d weiterer Vorschlag</item>
+        <item quantity="other">und %d weitere Vorschläge</item>
+    </plurals>
+    <!-- Snackbar after accepting. %1$s: chore name, %2$s: e.g. "alle 3 Wochen" -->
+    <string name="undo_interval_changed">«%1$s» jetzt %2$s</string>
+    <!-- F3.6 week view -->
+    <string name="all_view_list">Liste</string>
+    <string name="all_view_week">Woche</string>
+    <string name="week_previous">Vorherige Woche</string>
+    <string name="week_next">Nächste Woche</string>
+    <string name="week_this">Diese Woche</string>
+    <string name="week_in_weeks">In %d Wochen</string>
+    <string name="week_range">%1$s – %2$s</string>
+    <string name="week_today">Heute</string>
+    <string name="week_day_today">Heute · %s</string>
+    <string name="week_nothing_due">Nichts fällig</string>
+    <string name="week_holiday">Ferien</string>
+    <string name="week_forecast">Voraussichtlich</string>
+    <string name="week_summary_none">In dieser Woche ist nichts fällig</string>
+    <plurals name="week_summary">
+        <item quantity="one">%d Aufgabe in dieser Woche</item>
+        <item quantity="other">%d Aufgaben in dieser Woche</item>
+    </plurals>
+    <!-- F7.7 badges, F7.8 room statistics -->
+    <string name="badges_title">Abzeichen</string>
+    <string name="badges_next">Als Nächstes</string>
+    <string name="badges_none_yet">Erledige deine erste Aufgabe für dein erstes Abzeichen.</string>
+    <string name="badge_progress">%1$d von %2$d</string>
+    <string name="badge_earned_description">%1$s, erreicht: %2$s</string>
+    <string name="badge_next_description">%1$s, noch nicht erreicht: %2$s, %3$s</string>
+    <string name="badge_done_1">Der erste Schritt</string>
+    <string name="badge_done_10">Am Ball</string>
+    <string name="badge_done_50">Fleissig</string>
+    <string name="badge_done_100">Hundert!</string>
+    <string name="badge_done_250">Haushaltsprofi</string>
+    <string name="badge_done_500">Legende</string>
+    <string name="badge_streak_7">Eine Woche im Griff</string>
+    <string name="badge_streak_28">Vier Wochen im Griff</string>
+    <string name="badge_streak_100">Hundert Tage im Griff</string>
+    <string name="badge_chore_streak_10">Verlässlich</string>
+    <plurals name="badge_done_description">
+        <item quantity="one">Die erste Aufgabe erledigt</item>
+        <item quantity="other">%d Aufgaben erledigt</item>
+    </plurals>
+    <plurals name="badge_streak_description">
+        <item quantity="one">%d Tag in Folge alles erledigt</item>
+        <item quantity="other">%d Tage in Folge alles erledigt</item>
+    </plurals>
+    <plurals name="badge_chore_streak_description">
+        <item quantity="one">Eine Aufgabe %d-mal pünktlich erledigt</item>
+        <item quantity="other">Eine Aufgabe %d-mal in Folge pünktlich erledigt</item>
+    </plurals>
+    <string name="snackbar_new_badge">Neues Abzeichen: %s 🏅</string>
+    <plurals name="snackbar_new_badges">
+        <item quantity="one">%d neues Abzeichen 🏅</item>
+        <item quantity="other">%d neue Abzeichen 🏅</item>
+    </plurals>
+    <string name="area_stats_title">Nach Raum</string>
+    <string name="area_stats_note">Erledigt in den letzten 30 Tagen</string>
+    <string name="area_stats_none">Ohne Raum</string>
+    <plurals name="area_stats_description">
+        <item quantity="one">%1$s: %2$d-mal erledigt in den letzten 30 Tagen</item>
+        <item quantity="other">%1$s: %2$d-mal erledigt in den letzten 30 Tagen</item>
+    </plurals>
 </resources>

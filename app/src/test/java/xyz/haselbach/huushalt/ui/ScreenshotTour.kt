@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
 import java.time.LocalDate
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
@@ -78,9 +79,15 @@ abstract class ScreenshotTourBase(private val variant: String, private val theme
         shot("02-alle")
         compose.onNodeWithText("Nach Raum").performClick()
         shot("03-alle-raum")
+        compose.onNodeWithText("Woche").performClick()
+        waitFor("Diese Woche")
+        shot("03b-alle-woche")
+        compose.onNodeWithText("Liste").performClick()
         compose.onNodeWithText("Fortschritt").performClick()
         waitFor("Erledigt pro Woche")
         shot("04-fortschritt")
+        compose.onNode(androidx.compose.ui.test.hasScrollAction()).performScrollToNode(hasText("Zuletzt erledigt"))
+        shot("04b-abzeichen")
         compose.onNodeWithText("Heute").performClick()
         waitFor("Bad putzen")
         compose.onNodeWithText("Bad putzen").performClick()
