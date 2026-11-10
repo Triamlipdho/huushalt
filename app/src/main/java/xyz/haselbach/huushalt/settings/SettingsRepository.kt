@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import java.time.DayOfWeek
 import java.time.LocalTime
@@ -38,6 +39,8 @@ data class AppSettings(
     val dynamicColor: Boolean = false,
     /** Start of the week for statistics and weekday lists (F9.4). */
     val firstDayOfWeek: DayOfWeek = DayOfWeek.MONDAY,
+    /** Badges already announced with a snackbar (F7.7); null until the first check. */
+    val announcedBadges: Set<String>? = null,
 )
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
@@ -66,6 +69,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             prefs[THEME] = new.theme.name
             prefs[DYNAMIC_COLOR] = new.dynamicColor
             prefs[FIRST_DAY_OF_WEEK] = new.firstDayOfWeek.value
+            new.announcedBadges?.let { prefs[ANNOUNCED_BADGES] = it } ?: prefs.remove(ANNOUNCED_BADGES)
         }
     }
 
@@ -81,6 +85,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val THEME = stringPreferencesKey("theme")
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val FIRST_DAY_OF_WEEK = intPreferencesKey("first_day_of_week")
+        val ANNOUNCED_BADGES = stringSetPreferencesKey("announced_badges")
 
         fun Preferences.toSettings(): AppSettings {
             val defaults = ReminderSettings()
@@ -98,6 +103,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
                 theme = this[THEME]?.let { name -> ThemeMode.entries.find { it.name == name } } ?: ThemeMode.SYSTEM,
                 dynamicColor = this[DYNAMIC_COLOR] ?: false,
                 firstDayOfWeek = this[FIRST_DAY_OF_WEEK]?.let { DayOfWeek.of(it) } ?: DayOfWeek.MONDAY,
+                announcedBadges = this[ANNOUNCED_BADGES],
             )
         }
 

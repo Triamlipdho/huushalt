@@ -451,4 +451,45 @@
     <string name="stats_last_30">30 Tage</string>
     <string name="stats_previous_30">Davor: %d</string>
     <string name="undo_not_possible">Nicht mehr rückgängig zu machen, die Aufgabe wurde inzwischen geändert</string>
+    <!-- F7.7 badges, F7.8 room statistics -->
+    <string name="badges_title">Abzeichen</string>
+    <string name="badges_next">Als Nächstes</string>
+    <string name="badges_none_yet">Erledige deine erste Aufgabe für dein erstes Abzeichen.</string>
+    <string name="badge_progress">%1$d von %2$d</string>
+    <string name="badge_earned_description">%1$s, erreicht: %2$s</string>
+    <string name="badge_next_description">%1$s, noch nicht erreicht: %2$s, %3$s</string>
+    <string name="badge_done_1">Der erste Schritt</string>
+    <string name="badge_done_10">Am Ball</string>
+    <string name="badge_done_50">Fleissig</string>
+    <string name="badge_done_100">Hundert!</string>
+    <string name="badge_done_250">Haushaltsprofi</string>
+    <string name="badge_done_500">Legende</string>
+    <string name="badge_streak_7">Eine Woche im Griff</string>
+    <string name="badge_streak_28">Vier Wochen im Griff</string>
+    <string name="badge_streak_100">Hundert Tage im Griff</string>
+    <string name="badge_chore_streak_10">Verlässlich</string>
+    <plurals name="badge_done_description">
+        <item quantity="one">Die erste Aufgabe erledigt</item>
+        <item quantity="other">%d Aufgaben erledigt</item>
+    </plurals>
+    <plurals name="badge_streak_description">
+        <item quantity="one">%d Tag in Folge alles erledigt</item>
+        <item quantity="other">%d Tage in Folge alles erledigt</item>
+    </plurals>
+    <plurals name="badge_chore_streak_description">
+        <item quantity="one">Eine Aufgabe %d-mal pünktlich erledigt</item>
+        <item quantity="other">Eine Aufgabe %d-mal in Folge pünktlich erledigt</item>
+    </plurals>
+    <string name="snackbar_new_badge">Neues Abzeichen: %s 🏅</string>
+    <plurals name="snackbar_new_badges">
+        <item quantity="one">%d neues Abzeichen 🏅</item>
+        <item quantity="other">%d neue Abzeichen 🏅</item>
+    </plurals>
+    <string name="area_stats_title">Nach Raum</string>
+    <string name="area_stats_note">Erledigt in den letzten 30 Tagen</string>
+    <string name="area_stats_none">Ohne Raum</string>
+    <plurals name="area_stats_description">
+        <item quantity="one">%1$s: %2$d-mal erledigt in den letzten 30 Tagen</item>
+        <item quantity="other">%1$s: %2$d-mal erledigt in den letzten 30 Tagen</item>
+    </plurals>
 </resources>

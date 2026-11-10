@@ -77,6 +77,7 @@ import xyz.haselbach.huushalt.ui.edit.ChoreEditScreen
 import xyz.haselbach.huushalt.ui.components.PermissionCard
 import xyz.haselbach.huushalt.ui.holiday.HolidayScreen
 import xyz.haselbach.huushalt.ui.home.HomeScreen
+import xyz.haselbach.huushalt.ui.progress.AnnounceNewBadges
 import xyz.haselbach.huushalt.ui.progress.ProgressScreen
 import xyz.haselbach.huushalt.ui.settings.SettingsScreen
 import xyz.haselbach.huushalt.ui.settings.SettingsViewModel
@@ -212,6 +213,11 @@ fun HuushaltApp(
     val progressState = progress ?: return
     val allAreas = areas ?: return
 
+    // "Neues Abzeichen" once per badge (F7.7).
+    AnnounceNewBadges(progressState.badges, appSettings.announcedBadges, appSettings.motivationEnabled, snackbarHostState) { ids ->
+        settingsViewModel.update { it.copy(announcedBadges = it.announcedBadges.orEmpty() + ids) }
+    }
+
     fun complete(chore: Chore) {
         if (chore.checklistUnfinished) confirmCompleteId = chore.id else viewModel.complete(chore)
     }
@@ -295,6 +301,7 @@ fun HuushaltApp(
                         motivationEnabled = appSettings.motivationEnabled,
                         contentPadding = padding,
                         onOpenChore = { open(Route.detail(it)) },
+                        areas = allAreas,
                     )
                 }
             }

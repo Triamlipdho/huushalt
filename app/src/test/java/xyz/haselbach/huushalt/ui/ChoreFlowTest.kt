@@ -13,6 +13,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import org.junit.Before
 import org.junit.Rule
@@ -105,8 +106,10 @@ class ChoreFlowTest {
         compose.onNodeWithText("Fortschritt").performClick()
         waitFor("Alles erledigt in Folge")
         waitFor("🔥 1 Tag")
-        compose.onNodeWithText("Zuletzt erledigt").assertExists()
         compose.onNodeWithText("100 %").assertExists()
+        // Below the badges (F7.7).
+        compose.onNode(androidx.compose.ui.test.hasScrollAction()).performScrollToNode(hasText("Zuletzt erledigt"))
+        compose.onNodeWithText("Zuletzt erledigt").assertExists()
         compose.onNodeWithText("Alle Aufgaben").assertExists() // only the tab label, not the title
         compose.onAllNodesWithText("Fortschritt").assertCountEquals(2) // title and tab label
         screenshot("8-progress")
