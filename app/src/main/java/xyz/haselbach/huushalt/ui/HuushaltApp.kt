@@ -289,6 +289,8 @@ fun HuushaltApp(
                     AllChoresScreen(
                         chores = allChores,
                         showAreaSort = allAreas.isNotEmpty(),
+                        firstDayOfWeek = appSettings.firstDayOfWeek,
+                        holidays = listOfNotNull(homeState.activeHoliday, homeState.plannedHoliday),
                         today = today,
                         contentPadding = padding,
                         onOpen = { open(Route.detail(it.id)) },

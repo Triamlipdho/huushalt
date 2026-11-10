@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -14,24 +15,34 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import java.time.DayOfWeek
 import java.time.LocalDate
 import xyz.haselbach.huushalt.R
 import xyz.haselbach.huushalt.domain.Chore
+import xyz.haselbach.huushalt.domain.Holiday
+import xyz.haselbach.huushalt.domain.WeekForecast
 import xyz.haselbach.huushalt.ui.components.ChoreRow
 import xyz.haselbach.huushalt.ui.components.EmptyState
 import xyz.haselbach.huushalt.ui.components.SectionHeader
 import xyz.haselbach.huushalt.ui.components.withFabSpace
 
-/** All chores, sortable by due date or name (F3.4). Any chore can be marked done here (F4.7). */
+/**
+ * All chores, sortable by due date or name (F3.4), or as a week view (F3.6). Any chore can be
+ * marked done here (F4.7).
+ */
 @Composable
 fun AllChoresScreen(
     chores: List<Chore>,
@@ -40,7 +51,12 @@ fun AllChoresScreen(
     onOpen: (Chore) -> Unit,
     onComplete: (Chore) -> Unit,
     showAreaSort: Boolean = true,
+    firstDayOfWeek: DayOfWeek = DayOfWeek.MONDAY,
+    holidays: List<Holiday> = emptyList(),
 ) {
+    // List or week view (F3.6).
+    var weekMode by rememberSaveable { mutableStateOf(false) }
+    var weekOffset by rememberSaveable { mutableIntStateOf(0) }
     var sort by rememberSaveable { mutableStateOf(Sort.DUE) }
     var query by rememberSaveable { mutableStateOf("") }
     // Search by name and notes (F3.7).
@@ -60,7 +76,31 @@ fun AllChoresScreen(
     val byArea = open.groupBy { it.areaName }
         .toSortedMap(compareBy<String?> { it == null }.thenBy { it?.lowercase() })
 
+    val viewSwitch: LazyListScope.() -> Unit = {
+        item(key = "view-switch") {
+            ViewSwitch(weekMode, onChange = { weekMode = it })
+        }
+    }
+    if (weekMode) {
+        val start = WeekForecast.weekStart(today, firstDayOfWeek).plusWeeks(weekOffset.toLong())
+        val days = WeekForecast.week(chores, start, today, holidays)
+        LazyColumn(contentPadding = contentPadding.withFabSpace()) {
+            viewSwitch()
+            weekView(
+                days = days,
+                today = today,
+                weekOffset = weekOffset,
+                holidays = holidays,
+                onWeekOffsetChange = { weekOffset = it.coerceIn(0, WeekForecast.MAX_WEEKS_AHEAD) },
+                onOpen = { onOpen(it.chore) },
+                onComplete = { onComplete(it.chore) },
+            )
+        }
+        return
+    }
+
     LazyColumn(contentPadding = contentPadding.withFabSpace()) {
+        viewSwitch()
         if (chores.size > SEARCH_FROM) {
             item(key = "search") {
                 OutlinedTextField(
@@ -127,6 +167,20 @@ fun AllChoresScreen(
 }
 
 private enum class Sort { DUE, NAME, AREA }
+
+/** "Liste | Woche" (F3.6). */
+@Composable
+private fun ViewSwitch(weekMode: Boolean, onChange: (Boolean) -> Unit) {
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        listOf(false to R.string.all_view_list, true to R.string.all_view_week).forEachIndexed { index, (week, label) ->
+            SegmentedButton(
+                selected = weekMode == week,
+                onClick = { onChange(week) },
+                shape = SegmentedButtonDefaults.itemShape(index, 2),
+            ) { Text(stringResource(label)) }
+        }
+    }
+}
 
 /** The search field appears once there are enough chores to need it. */
 private const val SEARCH_FROM = 8
