@@ -184,7 +184,7 @@ fun HuushaltApp(
                             actionLabel = undoText,
                             duration = SnackbarDuration.Short,
                         )
-                        if (result == SnackbarResult.ActionPerformed) viewModel.undoCompletion(event.completionId)
+                        if (result == SnackbarResult.ActionPerformed) viewModel.undoCompletion(event.completionId, event.recheckOnUndo)
                     }
                 }
                 is UiEvent.Changed -> {
@@ -323,7 +323,7 @@ fun HuushaltApp(
                     onDeleteCompletion = { completionId -> viewModel.deleteCompletion(id, completionId) },
                     streak = progressState.choreStreaks[id].takeIf { appSettings.motivationEnabled },
                     checklist = checklist,
-                    onToggleItem = { viewModel.setChecked(it.id, !it.checked) },
+                    onToggleItem = { viewModel.toggleChecklistItem(chore, it, checklist) },
                     onPausedChange = { viewModel.setPaused(id, it) },
                     onCompleteOn = { date -> viewModel.complete(chore, date) },
                     onSkip = { viewModel.skip(id) },

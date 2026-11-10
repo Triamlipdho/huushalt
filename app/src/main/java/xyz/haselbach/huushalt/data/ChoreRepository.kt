@@ -116,6 +116,11 @@ class ChoreRepository(
 
     suspend fun setChecked(itemId: Long, checked: Boolean) = dao.setChecklistItemChecked(itemId, checked)
 
+    /** Ticks several checklist items again, e.g. when a completion is undone (F1.9). */
+    suspend fun setChecked(itemIds: List<Long>) = db.withTransaction {
+        itemIds.forEach { dao.setChecklistItemChecked(it, true) }
+    }
+
     /**
      * Adds chores from the catalogue (F8.2): rooms are created when missing (matched by name,
      * ignoring case), first due dates are spread out so not everything is due on the same day.

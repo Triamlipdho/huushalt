@@ -73,6 +73,28 @@ class OrganizeFlowTest {
     }
 
     @Test
+    fun tickingTheLastItemCompletesTheChore() {
+        waitFor("Noch keine Aufgaben")
+        createChore("Bad putzen", checklist = listOf("Lavabo", "WC"))
+        compose.onNodeWithText("Bad putzen").performClick()
+        waitFor("Checkliste 0/2")
+        compose.onNodeWithText("Lavabo").performClick()
+        waitFor("Checkliste 1/2")
+        compose.onNodeWithText("Noch nicht erledigt.").assertExists()
+
+        // F1.9: the last tick marks the chore as done, the checklist starts fresh.
+        compose.onNodeWithText("WC").performClick()
+        waitFor("Alles erledigt für heute 🎉") // the only chore, so it is celebrated
+        waitFor("Checkliste 0/2")
+        compose.onNodeWithText("Noch nicht erledigt.").assertDoesNotExist()
+
+        // Undo: not done again, and only the last item is open.
+        compose.onNodeWithText("Rückgängig").performClick()
+        waitFor("Noch nicht erledigt.")
+        waitFor("Checkliste 1/2")
+    }
+
+    @Test
     fun roomFilterAndPausing() {
         waitFor("Noch keine Aufgaben")
         createChore("Kühlschrank putzen", room = "Küche")

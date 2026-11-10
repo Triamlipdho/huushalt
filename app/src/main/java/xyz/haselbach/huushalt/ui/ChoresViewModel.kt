@@ -82,7 +82,13 @@ data class ProgressState(
 
 sealed interface UiEvent {
     /** [allDoneToday]: this was the last open chore of the day, time to celebrate (F7.5). */
-    data class Completed(val choreName: String, val completionId: Long, val allDoneToday: Boolean) : UiEvent
+    data class Completed(
+        val choreName: String,
+        val completionId: Long,
+        val allDoneToday: Boolean,
+        /** Checklist items to tick again on undo, when ticking the last one completed the chore (F1.9). */
+        val recheckOnUndo: List<Long> = emptyList(),
+    ) : UiEvent
 
     /** A change that can be undone with [token]; shown as a snackbar with "Rückgängig". */
     data class Changed(
@@ -223,6 +229,24 @@ class ChoresViewModel(
         viewModelScope.launch { repository.setChecked(itemId, checked) }
     }
 
+    /**
+     * Ticks or unticks a checklist item of [chore]. Ticking the last open item marks the chore as
+     * done (F1.9); undo then ticks the other items again, so only the last one is open.
+     */
+    fun toggleChecklistItem(chore: Chore, item: ChecklistItem, checklist: List<ChecklistItem>) {
+        val checked = !item.checked
+        val others = checklist.filter { it.id != item.id }
+        val completes = checked && others.all { it.checked } && !chore.paused && !chore.isFinished
+        if (!completes) {
+            setChecked(item.id, checked)
+            return
+        }
+        viewModelScope.launch {
+            repository.setChecked(item.id, true)
+            complete(chore, recheckOnUndo = others.map { it.id })
+        }
+    }
+
     fun setPaused(choreId: Long, paused: Boolean) =
         undoable(if (paused) ChangeKind.PAUSED else ChangeKind.RESUMED, choreId) { repository.setPaused(choreId, paused) }
 
@@ -240,12 +264,16 @@ class ChoresViewModel(
 
     /** Marks a chore as done today, or on an earlier [date] ("Früher erledigt", F4.3). */
     fun complete(chore: Chore, date: LocalDate = LocalDate.now()) {
-        viewModelScope.launch {
+        viewModelScope.launch { complete(chore, date, recheckOnUndo = emptyList()) }
+    }
+
+    private suspend fun complete(chore: Chore, date: LocalDate = LocalDate.now(), recheckOnUndo: List<Long>) {
+        run {
             val today = LocalDate.now()
             val wasOpen = chore.status(today) is DueStatus.Overdue || chore.isDueNow(today)
-            val completionId = repository.complete(chore.id, date) ?: return@launch
+            val completionId = repository.complete(chore.id, date) ?: return
             val allDone = wasOpen && OpenChores.of(repository.chores.first(), today).isEmpty
-            events.send(UiEvent.Completed(chore.name, completionId, allDone))
+            events.send(UiEvent.Completed(chore.name, completionId, allDone, recheckOnUndo))
         }
     }
 
@@ -262,8 +290,11 @@ class ChoresViewModel(
     fun deleteCompletion(choreId: Long, completionId: Long) =
         undoable(ChangeKind.COMPLETION_DELETED, choreId) { repository.deleteCompletion(completionId) }
 
-    fun undoCompletion(completionId: Long) {
-        viewModelScope.launch { repository.undoCompletion(completionId) }
+    fun undoCompletion(completionId: Long, recheck: List<Long> = emptyList()) {
+        viewModelScope.launch {
+            repository.undoCompletion(completionId)
+            if (recheck.isNotEmpty()) repository.setChecked(recheck)
+        }
     }
 
     fun postpone(choreId: Long, date: LocalDate) = undoable(ChangeKind.POSTPONED, choreId, date) { repository.postpone(choreId, date) }
