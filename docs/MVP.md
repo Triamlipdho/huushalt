@@ -204,6 +204,7 @@ coming back to a wall of overdue chores is the fastest way to give up on the app
 | 8 Home Assistant | F5.8 | Done |
 | 9 UX review | Undo for every change (snapshot of the chore), ask before discarding edits, "Heute erledigt" section, swipe to complete / postpone, own green colour scheme with terracotta accent (wallpaper colours optional), progress ring, calmer detail and editor screens, history with punctuality, rolling 7/30-day statistics, screen transitions | Done |
 | Security hardening | Import validates the whole file (schedules, date range 1900 to 2200, references) and refuses it without changes; import files limited to 5 MB; GitHub Actions pinned to commit SHAs | Done |
+| F3.6 Week view | "Liste \| Woche" in Alle Aufgaben: one week per page from the first day of the week, up to 12 weeks ahead; repeating chores on every day they will be due (forecast shown quieter), overdue ones on today, holidays respected | Done |
 
 ## Non-functional requirements
 

@@ -451,4 +451,22 @@
     <string name="stats_last_30">30 Tage</string>
     <string name="stats_previous_30">Davor: %d</string>
     <string name="undo_not_possible">Nicht mehr rückgängig zu machen, die Aufgabe wurde inzwischen geändert</string>
+    <!-- F3.6 week view -->
+    <string name="all_view_list">Liste</string>
+    <string name="all_view_week">Woche</string>
+    <string name="week_previous">Vorherige Woche</string>
+    <string name="week_next">Nächste Woche</string>
+    <string name="week_this">Diese Woche</string>
+    <string name="week_in_weeks">In %d Wochen</string>
+    <string name="week_range">%1$s – %2$s</string>
+    <string name="week_today">Heute</string>
+    <string name="week_day_today">Heute · %s</string>
+    <string name="week_nothing_due">Nichts fällig</string>
+    <string name="week_holiday">Ferien</string>
+    <string name="week_forecast">Voraussichtlich</string>
+    <string name="week_summary_none">In dieser Woche ist nichts fällig</string>
+    <plurals name="week_summary">
+        <item quantity="one">%d Aufgabe in dieser Woche</item>
+        <item quantity="other">%d Aufgaben in dieser Woche</item>
+    </plurals>
 </resources>
