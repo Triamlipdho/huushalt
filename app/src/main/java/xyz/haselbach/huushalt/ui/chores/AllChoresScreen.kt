@@ -1,5 +1,6 @@
 package xyz.haselbach.huushalt.ui.chores
 
+import xyz.haselbach.huushalt.ui.components.stickyBackground
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -59,6 +60,9 @@ fun AllChoresScreen(
     // List or week view (F3.6).
     var weekMode by rememberSaveable { mutableStateOf(false) }
     var weekOffset by rememberSaveable { mutableIntStateOf(0) }
+    // Selected day of the week view, as days since the week's start (0..6); null: today, or the
+    // first day in other weeks.
+    var selectedIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     var sort by rememberSaveable { mutableStateOf(Sort.DUE) }
     var query by rememberSaveable { mutableStateOf("") }
     // Search by name and notes (F3.7).
@@ -86,6 +90,8 @@ fun AllChoresScreen(
     if (weekMode) {
         val start = WeekForecast.weekStart(today, firstDayOfWeek).plusWeeks(weekOffset.toLong())
         val days = WeekForecast.week(chores, start, today, holidays)
+        val selectedDay = selectedIndex?.let { start.plusDays(it.toLong()) }
+            ?: if (weekOffset == 0) today else start
         LazyColumn(contentPadding = contentPadding.withFabSpace()) {
             viewSwitch()
             weekView(
@@ -93,7 +99,14 @@ fun AllChoresScreen(
                 today = today,
                 weekOffset = weekOffset,
                 holidays = holidays,
-                onWeekOffsetChange = { weekOffset = it.coerceIn(0, WeekForecast.MAX_WEEKS_AHEAD) },
+                selectedDay = selectedDay,
+                onSelectDay = { selectedIndex = (it.toEpochDay() - start.toEpochDay()).toInt() },
+                onWeekOffsetChange = { offset ->
+                    val next = offset.coerceIn(0, WeekForecast.MAX_WEEKS_AHEAD)
+                    // Back to this week: show today again; other weeks keep the weekday.
+                    if (next == 0) selectedIndex = null
+                    weekOffset = next
+                },
                 onOpen = { onOpen(it.chore) },
                 onComplete = { onComplete(it.chore) },
             )
@@ -143,7 +156,7 @@ fun AllChoresScreen(
         }
         if (sort == Sort.AREA && showAreaSort) {
             byArea.forEach { (area, list) ->
-                item(key = "area-$area") { SectionHeader(area ?: noAreaLabel) }
+                stickyHeader(key = "area-$area") { SectionHeader(area ?: noAreaLabel, Modifier.stickyBackground()) }
                 items(list.sortedWith(byDue), key = { it.id }) { chore ->
                     ChoreRow(
                         chore,
@@ -167,13 +180,13 @@ fun AllChoresScreen(
             }
         }
         if (paused.isNotEmpty()) {
-            item(key = "paused-header") { SectionHeader(stringResource(R.string.all_section_paused)) }
+            stickyHeader(key = "paused-header") { SectionHeader(stringResource(R.string.all_section_paused), Modifier.stickyBackground()) }
             items(paused, key = { it.id }) { chore ->
                 ChoreRow(chore, today, onClick = { onOpen(chore) }, onComplete = {})
             }
         }
         if (finished.isNotEmpty()) {
-            item(key = "finished-header") { SectionHeader(stringResource(R.string.all_section_finished)) }
+            stickyHeader(key = "finished-header") { SectionHeader(stringResource(R.string.all_section_finished), Modifier.stickyBackground()) }
             items(finished.sortedBy { it.name.lowercase() }, key = { it.id }) { chore ->
                 ChoreRow(chore, today, onClick = { onOpen(chore) }, onComplete = {})
             }

@@ -6,6 +6,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import java.time.LocalDate
@@ -84,13 +86,17 @@ abstract class ScreenshotTourBase(private val variant: String, private val theme
         shot("03b-alle-woche")
         compose.onNodeWithText("Liste").performClick()
         compose.onNodeWithText("Fortschritt").performClick()
-        waitFor("Erledigt pro Woche")
+        waitFor("Erledigt pro Kalenderwoche")
         shot("04-fortschritt")
         compose.onNode(androidx.compose.ui.test.hasScrollAction()).performScrollToNode(hasText("Zuletzt erledigt"))
         shot("04b-abzeichen")
         compose.onNodeWithText("Heute").performClick()
         waitFor("Bad putzen")
         compose.onNodeWithText("Bad putzen").performClick()
+        waitFor("Details und Verlauf")
+        shot("05a-sheet")
+        compose.onNodeWithText("Details und Verlauf").performClick()
+        compose.waitUntilDoesNotExist(hasText("Details und Verlauf"), timeoutMillis = 5_000)
         waitFor("Checkliste")
         shot("05-detail")
         compose.onNodeWithContentDescription("Bearbeiten").performClick()
@@ -106,6 +112,12 @@ abstract class ScreenshotTourBase(private val variant: String, private val theme
         compose.onNodeWithContentDescription("Einstellungen").performClick()
         waitFor("Einstellungen")
         shot("08-einstellungen")
+        // The badge snackbar may cover the end of the list: swipe it away, as a person would.
+        val badge = hasText("Neues Abzeichen", substring = true)
+        if (compose.onAllNodes(badge).fetchSemanticsNodes().isNotEmpty()) {
+            compose.onNode(badge).performTouchInput { swipeRight() }
+            compose.waitUntilDoesNotExist(badge, timeoutMillis = 5_000)
+        }
         compose.onNodeWithText("Vorschläge").performScrollTo().performClick()
         waitFor("Ganze Wohnung")
         shot("09-vorschlaege")

@@ -1,5 +1,6 @@
 package xyz.haselbach.huushalt.ui
 
+import xyz.haselbach.huushalt.testing.openDetails
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasContentDescription
@@ -77,7 +78,7 @@ class ChoreFlowTest {
         compose.onNodeWithText("Speichern").performClick()
 
         waitFor("Bad putzen")
-        compose.onNodeWithText("Bad putzen").performClick()
+        compose.openDetails("Bad putzen")
         waitFor("Noch nicht erledigt.")
         compose.onNode(hasText("Jede Woche am ", substring = true)).assertExists()
 
@@ -143,7 +144,7 @@ class ChoreFlowTest {
         compose.onNodeWithText("Speichern").performClick()
 
         waitFor("Fenster putzen")
-        compose.onNodeWithText("Fenster putzen").performClick()
+        compose.openDetails("Fenster putzen")
         compose.onNodeWithContentDescription("Bearbeiten").performClick()
         // The editor appears once the checklist is loaded from the database.
         compose.waitUntilAtLeastOneExists(hasText("Aufgabe löschen"), timeoutMillis = 5_000)

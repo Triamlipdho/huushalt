@@ -1,5 +1,6 @@
 package xyz.haselbach.huushalt.ui.settings
 
+import xyz.haselbach.huushalt.ui.components.HuushaltSnackbarHost
 import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -88,7 +89,7 @@ fun SettingsScreen(
     var editing by rememberSaveable { mutableStateOf<TimeField?>(null) }
 
     Scaffold(
-        snackbarHost = { snackbarHostState?.let { SnackbarHost(it) } },
+        snackbarHost = { snackbarHostState?.let { HuushaltSnackbarHost(it) } },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.settings_title)) },

@@ -1,5 +1,6 @@
 package xyz.haselbach.huushalt.ui.components
 
+import xyz.haselbach.huushalt.ui.theme.Spacing
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -121,7 +122,8 @@ fun ChoreRow(
             },
             trailingContent = if (!canComplete) null else {
                 {
-                    // Due chores get a prominent button, upcoming ones a quiet one.
+                    // Due chores get a prominent button, upcoming ones a quiet one. Its ring uses
+                    // "outline", which keeps 3:1 against the surface (WCAG 1.4.11); outlineVariant doesn't.
                     if (dueNow) {
                         FilledTonalIconButton(
                             onClick = complete,
@@ -135,7 +137,7 @@ fun ChoreRow(
                     } else {
                         OutlinedIconButton(
                             onClick = complete,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         ) {
                             Icon(Icons.Filled.Check, contentDescription = completeLabel, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -193,7 +195,7 @@ private fun SwipeBackground(direction: SwipeToDismissBoxValue) {
         Modifier
             .fillMaxSize()
             .background(color)
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = Spacing.xl),
         contentAlignment = alignment,
     ) {
         if (icon != null) {

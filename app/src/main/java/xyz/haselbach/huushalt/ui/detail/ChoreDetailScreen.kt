@@ -1,5 +1,9 @@
 package xyz.haselbach.huushalt.ui.detail
 
+import xyz.haselbach.huushalt.ui.components.HuushaltSnackbarHost
+import xyz.haselbach.huushalt.ui.theme.Spacing
+import xyz.haselbach.huushalt.ui.theme.Sizes
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -165,7 +169,7 @@ fun ChoreDetailScreen(
                 },
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { HuushaltSnackbarHost(snackbarHostState) },
     ) { padding ->
         LazyColumn(contentPadding = padding) {
             item(key = "summary") { Summary(chore, today, streak) }
@@ -196,12 +200,12 @@ fun ChoreDetailScreen(
                         horizontalArrangement = Arrangement.SpaceEvenly,
                     ) {
                         TextButton(onClick = { pickDoneDate = true }) {
-                            Icon(Icons.Filled.History, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Filled.History, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                             Text(stringResource(R.string.action_done_earlier), modifier = Modifier.padding(start = 8.dp))
                         }
                         if (chore.schedule.isRepeating) {
                             TextButton(onClick = onSkip) {
-                                Icon(Icons.Filled.SkipNext, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Filled.SkipNext, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                                 Text(stringResource(R.string.action_skip), modifier = Modifier.padding(start = 8.dp))
                             }
                         }
@@ -329,9 +333,9 @@ private fun Summary(chore: Chore, today: LocalDate, streak: Int?) {
             contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
         ),
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.padding(Spacing.lg), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                ChoreAvatar(chore.look, size = 56.dp)
+                ChoreAvatar(chore.look, size = Sizes.avatarLarge)
                 Text(
                     dueLabel(chore, today),
                     style = MaterialTheme.typography.titleLarge,
@@ -395,7 +399,7 @@ private fun HistoryRow(completion: CompletionEntity, previous: CompletionEntity?
 }
 
 @Composable
-private fun InfoRow(icon: ImageVector, text: String) {
+internal fun InfoRow(icon: ImageVector, text: String) {
     Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
         Text(text, style = MaterialTheme.typography.bodyLarge)
@@ -404,7 +408,7 @@ private fun InfoRow(icon: ImageVector, text: String) {
 
 /** Postpone to tomorrow, in a week or to a chosen date (F4.4). */
 @Composable
-private fun PostponeDialog(today: LocalDate, onDismiss: () -> Unit, onPick: (LocalDate) -> Unit) {
+internal fun PostponeDialog(today: LocalDate, onDismiss: () -> Unit, onPick: (LocalDate) -> Unit) {
     var pickDate by rememberSaveable { mutableStateOf(false) }
     val tomorrow = today.plusDays(1)
     if (pickDate) {

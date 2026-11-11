@@ -1,5 +1,23 @@
 package xyz.haselbach.huushalt.ui
 
+import androidx.compose.runtime.key
+import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.MediumTopAppBar
+import xyz.haselbach.huushalt.ui.detail.ChoreSheet
+import xyz.haselbach.huushalt.ui.components.show
+import xyz.haselbach.huushalt.ui.components.HuushaltSnackbarHost
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Celebration
 import android.content.res.Resources
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -125,6 +143,8 @@ fun HuushaltApp(
     val intervalSuggestions by viewModel.intervalSuggestions.collectAsStateWithLifecycle()
     // A chore with an unfinished checklist waiting for "Trotzdem erledigt?" (F1.8).
     var confirmCompleteId by rememberSaveable { mutableStateOf<Long?>(null) }
+    // The chore whose sheet is open (tap on a chore in a list).
+    var sheetChoreId by rememberSaveable { mutableStateOf<Long?>(null) }
     val today by viewModel.today.collectAsStateWithLifecycle()
     val stack = rememberSaveable(saver = stackSaver) { mutableStateListOf(Route.TODAY) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -156,6 +176,7 @@ fun HuushaltApp(
     // suggestions (F9.7).
     LaunchedEffect(navRequest) {
         val target = navRequest?.target ?: return@LaunchedEffect
+        sheetChoreId = null
         stack.filter { it !in Route.tabs }.forEach(screenStates::removeState)
         stack.clear()
         stack.add(Route.TODAY)
@@ -182,8 +203,9 @@ fun HuushaltApp(
                     launch {
                         // Celebrate the last chore of the day (F7.5).
                         val message = if (event.allDoneToday && motivationEnabled) allDoneText else completedText.format(event.choreName)
-                        val result = snackbarHostState.showSnackbar(
+                        val result = snackbarHostState.show(
                             message = message,
+                            icon = if (event.allDoneToday && motivationEnabled) Icons.Filled.Celebration else Icons.Filled.Check,
                             actionLabel = undoText,
                             duration = SnackbarDuration.Short,
                         )
@@ -193,8 +215,9 @@ fun HuushaltApp(
                 is UiEvent.Changed -> {
                     snackbarHostState.currentSnackbarData?.dismiss()
                     launch {
-                        val result = snackbarHostState.showSnackbar(
+                        val result = snackbarHostState.show(
                             message = changeMessage(context.resources, event),
+                            icon = changeIcon(event.kind),
                             actionLabel = undoText,
                             duration = SnackbarDuration.Long,
                         )
@@ -203,7 +226,7 @@ fun HuushaltApp(
                 }
                 UiEvent.UndoNotPossible -> {
                     snackbarHostState.currentSnackbarData?.dismiss()
-                    launch { snackbarHostState.showSnackbar(undoNotPossibleText) }
+                    launch { snackbarHostState.show(undoNotPossibleText, Icons.Filled.Info) }
                 }
             }
         }
@@ -280,7 +303,8 @@ fun HuushaltApp(
                     HomeScreen(
                         state = homeState,
                         contentPadding = padding,
-                        onOpen = { open(Route.detail(it.id)) },
+                        onOpen = { sheetChoreId = it.id },
+                        onOpenDetails = { open(Route.detail(it.id)) },
                         onComplete = ::complete,
                         streak = progressState.streaks.current.takeIf { appSettings.motivationEnabled },
                         onReschedule = viewModel::rescheduleOverdue,
@@ -312,7 +336,7 @@ fun HuushaltApp(
                         holidays = allHolidays,
                         today = today,
                         contentPadding = padding,
-                        onOpen = { open(Route.detail(it.id)) },
+                        onOpen = { sheetChoreId = it.id },
                         onComplete = ::complete,
                         onPostpone = ::postponeOneDay,
                     )
@@ -321,7 +345,7 @@ fun HuushaltApp(
                         state = progressState,
                         motivationEnabled = appSettings.motivationEnabled,
                         contentPadding = padding,
-                        onOpenChore = { open(Route.detail(it)) },
+                        onOpenChore = { sheetChoreId = it },
                         areas = allAreas,
                     )
                 }
@@ -445,7 +469,7 @@ fun HuushaltApp(
                         viewModel.forgetUndo()
                         snackbarHostState.currentSnackbarData?.dismiss()
                     }
-                    snackbarHostState.showSnackbar(dataMessages.getValue(it))
+                    snackbarHostState.show(dataMessages.getValue(it), Icons.Filled.Info)
                 }
                 }
                 SettingsScreen(
@@ -544,6 +568,40 @@ fun HuushaltApp(
     ) { entry ->
         screenStates.SaveableStateProvider(entry) { Screen(entry) }
     }
+
+    // Quick look at a chore with the everyday actions; edit and details are one step further.
+    val sheetChore = allChores.find { it.id == sheetChoreId }
+    if (sheetChore != null) {
+        val id = sheetChore.id
+        val sheetChecklist by remember(id) { viewModel.checklist(id) }.collectAsStateWithLifecycle(emptyList())
+        ChoreSheet(
+            chore = sheetChore,
+            today = today,
+            checklist = sheetChecklist,
+            onDismiss = { sheetChoreId = null },
+            onComplete = { complete(sheetChore) },
+            onPostpone = { viewModel.postpone(id, it) },
+            onSkip = { viewModel.skip(id) },
+            onResume = { viewModel.setPaused(id, false) },
+            onToggleItem = { viewModel.toggleChecklistItem(sheetChore, it, sheetChecklist) },
+            onEdit = { open(Route.edit(id)) },
+            onDetails = { open(Route.detail(id)) },
+        )
+    } else if (sheetChoreId != null && chores != null) {
+        // Deleted in the meantime.
+        LaunchedEffect(sheetChoreId) { sheetChoreId = null }
+    }
+}
+
+/** Snackbar icon for a change that can be undone. */
+private fun changeIcon(kind: ChangeKind): ImageVector = when (kind) {
+    ChangeKind.SKIPPED -> Icons.Filled.SkipNext
+    ChangeKind.POSTPONED, ChangeKind.COMPLETION_MOVED, ChangeKind.RESCHEDULED -> Icons.Filled.Event
+    ChangeKind.PAUSED -> Icons.Filled.Pause
+    ChangeKind.RESUMED -> Icons.Filled.PlayArrow
+    ChangeKind.DELETED, ChangeKind.COMPLETION_DELETED -> Icons.Filled.Delete
+    ChangeKind.REOPENED -> Icons.AutoMirrored.Filled.Undo
+    ChangeKind.INTERVAL_CHANGED -> Icons.Filled.Refresh
 }
 
 /** Snackbar text for a change that can be undone. */
@@ -588,16 +646,20 @@ private fun MainScaffold(
         }
     }
     LaunchedEffect(tab) { fabVisible = true }
+    // Large title that shrinks to a small bar while scrolling down; the title always stays.
+    // Each tab starts expanded.
+    val topBarState = key(tab) { rememberTopAppBarState() }
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topBarState)
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollWatcher),
+        modifier = Modifier.nestedScroll(scrollWatcher).nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
+            val title = when (tab) {
+                Route.TODAY -> R.string.home_title
+                Route.ALL -> R.string.nav_all
+                else -> R.string.nav_progress
+            }
+            MediumTopAppBar(
                 title = {
-                    val title = when (tab) {
-                        Route.TODAY -> R.string.home_title
-                        Route.ALL -> R.string.nav_all
-                        else -> R.string.nav_progress
-                    }
                     Column {
                         Text(stringResource(title))
                         if (subtitle != null) {
@@ -609,6 +671,7 @@ private fun MainScaffold(
                         }
                     }
                 },
+                scrollBehavior = scrollBehavior,
                 actions = {
                     IconButton(onClick = onSettings) {
                         Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings_title))
@@ -653,7 +716,7 @@ private fun MainScaffold(
                 }
             }
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { HuushaltSnackbarHost(snackbarHostState) },
         content = content,
     )
 }

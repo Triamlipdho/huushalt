@@ -1,5 +1,9 @@
 package xyz.haselbach.huushalt.ui.home
 
+import xyz.haselbach.huushalt.ui.components.stickyBackground
+import xyz.haselbach.huushalt.ui.theme.Spacing
+import xyz.haselbach.huushalt.ui.theme.Sizes
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
@@ -72,6 +76,8 @@ fun HomeScreen(
     contentPadding: PaddingValues,
     onOpen: (Chore) -> Unit,
     onComplete: (Chore) -> Unit,
+    /** Straight to the detail screen, e.g. for an interval suggestion shown there. */
+    onOpenDetails: (Chore) -> Unit = onOpen,
     header: @Composable () -> Unit = {},
     /** Current "Alles erledigt" streak, or null when motivation is turned off (F7.2, F7.9). */
     streak: Int? = null,
@@ -116,7 +122,7 @@ fun HomeScreen(
         }
         intervalSuggestions.firstOrNull()?.let { (chore, suggestion) ->
             item(key = "interval-suggestion") {
-                IntervalSuggestionHint(chore, suggestion, more = intervalSuggestions.size - 1, onClick = { onOpen(chore) })
+                IntervalSuggestionHint(chore, suggestion, more = intervalSuggestions.size - 1, onClick = { onOpenDetails(chore) })
             }
         }
         if (areas.isNotEmpty() && state.hasChores) {
@@ -254,7 +260,7 @@ private fun Progress(state: HomeState, streak: Int?) {
                     CircularProgressIndicator(
                         progress = { progress },
                         modifier = Modifier.fillMaxSize(),
-                        strokeWidth = 6.dp,
+                        strokeWidth = Sizes.ringStroke,
                         trackColor = colors.surface.copy(alpha = 0.6f),
                         strokeCap = StrokeCap.Round,
                         gapSize = 0.dp,
@@ -314,8 +320,13 @@ private fun LazyListScope.section(
     onPostpone: ((Chore) -> Unit)? = null,
 ) {
     if (chores.isEmpty()) return
-    item(key = "header-$title") {
-        if (action == null) SectionHeader(stringResource(title)) else SectionHeaderWithAction(stringResource(title), action.first, action.second)
+    // The section title stays at the top while its chores scroll by.
+    stickyHeader(key = "header-$title") {
+        if (action == null) {
+            SectionHeader(stringResource(title), Modifier.stickyBackground())
+        } else {
+            SectionHeaderWithAction(stringResource(title), action.first, action.second, Modifier.stickyBackground())
+        }
     }
     items(chores, key = { "chore-${it.id}" }) { chore ->
         ChoreRow(
@@ -337,7 +348,8 @@ private fun DoneHeader(count: Int, expanded: Boolean, onToggle: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .clickable(onClickLabel = action, onClick = onToggle)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .heightIn(min = Sizes.touchTarget)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
