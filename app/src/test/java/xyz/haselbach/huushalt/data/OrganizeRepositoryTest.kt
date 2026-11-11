@@ -50,6 +50,14 @@ class OrganizeRepositoryTest {
     }
 
     @Test
+    fun `skipping starts the next time with an empty checklist`() = runBlocking {
+        val id = repo.save(null, "Staubsaugen", "", weekly, d("2026-11-10"), checklist = listOf(ChecklistDraft(null, "Küche"), ChecklistDraft(null, "Bad")))
+        repo.setChecked(repo.checklist(id).first().first().id, true)
+        repo.skip(id, d("2026-11-10"))
+        assertTrue(repo.checklist(id).first().none { it.checked })
+    }
+
+    @Test
     fun `rooms are shown on chores and deleting one keeps its chores`() = runBlocking {
         val kitchen = repo.addArea("Küche")
         val id = repo.save(null, "Kühlschrank putzen", "", weekly, d("2026-11-10"), areaId = kitchen)

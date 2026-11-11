@@ -249,6 +249,7 @@
     <string name="checklist">Checkliste</string>
     <string name="checklist_progress">%1$d/%2$d</string>
     <string name="checklist_add">Punkt hinzufügen</string>
+    <string name="checklist_add_rooms">Alle Räume einfügen</string>
     <string name="checklist_item_hint">z. B. Lavabo</string>
     <string name="checklist_remove">Punkt entfernen</string>
     <string name="checklist_optional">Optional: Teilschritte, die du beim Erledigen abhaken kannst.</string>

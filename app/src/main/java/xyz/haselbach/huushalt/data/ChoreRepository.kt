@@ -409,6 +409,8 @@ class ChoreRepository(
         if (!schedule.isRepeating) return@withTransaction
         recordMissed(chore, today)
         dao.updateDueDate(choreId, ScheduleCalculator.dueDateAfterCompletion(schedule, chore.anchorDate, due, maxOf(due, today)))
+        // The skipped time is over: the next one starts with an empty checklist, as after completing.
+        dao.resetChecklist(choreId)
     }
 }
 

@@ -292,7 +292,11 @@ class ChoresViewModel(
 
     /** Marks a chore as done today, or on an earlier [date] ("Früher erledigt", F4.3). */
     fun complete(chore: Chore, date: LocalDate = LocalDate.now()) {
-        viewModelScope.launch { complete(chore, date, recheckOnUndo = emptyList()) }
+        viewModelScope.launch {
+            // Completing resets the checklist; undo ticks again what was ticked ("Trotzdem erledigt" at 3/5).
+            val ticked = repository.checklist(chore.id).first().filter { it.checked }.map { it.id }
+            complete(chore, date, recheckOnUndo = ticked)
+        }
     }
 
     private suspend fun complete(chore: Chore, date: LocalDate = LocalDate.now(), recheckOnUndo: List<Long>) {
