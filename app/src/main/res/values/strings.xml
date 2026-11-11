@@ -433,7 +433,7 @@
     <string name="done_today">Erledigt</string>
     <string name="settings_dynamic_color">Farben vom Hintergrundbild</string>
     <string name="settings_dynamic_color_summary">Statt dem Grün von huushalt die Farben deines Hintergrundbilds verwenden</string>
-    <string name="action_postpone_tomorrow_description">«%s» auf morgen verschieben</string>
+    <string name="action_postpone_one_day_description">«%s» um einen Tag verschieben</string>
     <string name="action_more">Weitere Aktionen</string>
     <string name="history_on_time">Pünktlich</string>
     <plurals name="history_late">

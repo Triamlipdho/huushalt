@@ -130,5 +130,14 @@ class UndoFlowTest {
         waitFor("1 von 1 erledigt")
     }
 
+    @Test
+    fun swipingLeftPostponesInAllChoresToo() {
+        waitFor("Noch keine Aufgaben")
+        createChore("Staubsaugen")
+        compose.onNodeWithText("Alle Aufgaben").performClick()
+        compose.onNodeWithText("Staubsaugen").performTouchInput { swipeLeft() }
+        waitFor("«Staubsaugen» verschoben auf", substring = true)
+    }
+
     private fun screenshot(name: String) = compose.screenshot("undo-$name")
 }

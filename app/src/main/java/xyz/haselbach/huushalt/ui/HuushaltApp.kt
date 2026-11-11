@@ -231,6 +231,12 @@ fun HuushaltApp(
         if (chore.checklistUnfinished) confirmCompleteId = chore.id else viewModel.complete(chore)
     }
 
+    /** Swipe left: due chores move to tomorrow, upcoming ones one day after their due date. */
+    fun postponeOneDay(chore: Chore) {
+        val from = chore.dueDate?.takeIf { it > today } ?: today
+        viewModel.postpone(chore.id, from.plusDays(1))
+    }
+
     allChores.find { it.id == confirmCompleteId }?.let { chore ->
         AlertDialog(
             onDismissRequest = { confirmCompleteId = null },
@@ -284,7 +290,7 @@ fun HuushaltApp(
                         onEditChore = { open(Route.edit(it.id)) },
                         onOpenCatalog = { open(Route.CATALOG) },
                         onReopen = { viewModel.reopen(it.chore.id, it.completionId) },
-                        onPostponeToTomorrow = { viewModel.postpone(it.id, today.plusDays(1)) },
+                        onPostpone = ::postponeOneDay,
                         intervalSuggestions = intervalSuggestions.values.mapNotNull { suggestion ->
                             allChores.find { it.id == suggestion.choreId }?.let { it to suggestion }
                         },
@@ -308,6 +314,7 @@ fun HuushaltApp(
                         contentPadding = padding,
                         onOpen = { open(Route.detail(it.id)) },
                         onComplete = ::complete,
+                        onPostpone = ::postponeOneDay,
                     )
                 } else {
                     ProgressScreen(

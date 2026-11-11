@@ -50,6 +50,8 @@ fun AllChoresScreen(
     contentPadding: PaddingValues,
     onOpen: (Chore) -> Unit,
     onComplete: (Chore) -> Unit,
+    /** Swipe left: one day later (due chores: tomorrow). */
+    onPostpone: ((Chore) -> Unit)? = null,
     showAreaSort: Boolean = true,
     firstDayOfWeek: DayOfWeek = DayOfWeek.MONDAY,
     holidays: List<Holiday> = emptyList(),
@@ -143,12 +145,25 @@ fun AllChoresScreen(
             byArea.forEach { (area, list) ->
                 item(key = "area-$area") { SectionHeader(area ?: noAreaLabel) }
                 items(list.sortedWith(byDue), key = { it.id }) { chore ->
-                    ChoreRow(chore, today, onClick = { onOpen(chore) }, onComplete = { onComplete(chore) }, showArea = false)
+                    ChoreRow(
+                        chore,
+                        today,
+                        onClick = { onOpen(chore) },
+                        onComplete = { onComplete(chore) },
+                        showArea = false,
+                        onPostpone = onPostpone?.let { postpone -> { postpone(chore) } },
+                    )
                 }
             }
         } else {
             items(sorted, key = { it.id }) { chore ->
-                ChoreRow(chore, today, onClick = { onOpen(chore) }, onComplete = { onComplete(chore) })
+                ChoreRow(
+                    chore,
+                    today,
+                    onClick = { onOpen(chore) },
+                    onComplete = { onComplete(chore) },
+                    onPostpone = onPostpone?.let { postpone -> { postpone(chore) } },
+                )
             }
         }
         if (paused.isNotEmpty()) {
