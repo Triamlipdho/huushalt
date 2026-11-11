@@ -73,6 +73,48 @@ class OrganizeFlowTest {
     }
 
     @Test
+    fun undoAfterDoneAnywayKeepsTheTicks() {
+        waitFor("Noch keine Aufgaben")
+        createChore("Staubsaugen", checklist = listOf("Küche", "Bad", "Flur"))
+        waitFor("Heute fällig")
+        compose.onNodeWithText("Staubsaugen").performClick()
+        compose.onNodeWithText("Küche").performClick()
+        compose.onNodeWithText("Bad").performClick()
+        waitFor("Checkliste 2/3")
+
+        compose.onNodeWithText("Erledigt").performClick()
+        compose.onNodeWithText("Trotzdem erledigt").performClick()
+        waitFor("Checkliste 0/3")
+
+        // Undo brings back the two rooms already done.
+        compose.onNodeWithText("Rückgängig").performClick()
+        waitFor("Noch nicht erledigt.")
+        waitFor("Checkliste 2/3")
+    }
+
+    @Test
+    fun allRoomsCanBeAddedToTheChecklistAtOnce() {
+        waitFor("Noch keine Aufgaben")
+        createChore("Kühlschrank putzen", room = "Küche")
+        waitFor("Heute fällig")
+        createChore("Lavabo putzen", room = "Bad")
+        waitFor("Lavabo putzen")
+
+        compose.onNodeWithContentDescription("Neue Aufgabe").performClick()
+        compose.onNodeWithText("Name").performTextInput("Staubsaugen")
+        compose.onNodeWithText("Alle Räume einfügen").performScrollTo().performClick()
+        // Every room is listed now, so the button is gone.
+        compose.onNodeWithText("Alle Räume einfügen").assertDoesNotExist()
+        compose.onNodeWithText("Speichern").performClick()
+        waitFor("0/2", substring = true)
+
+        compose.onNodeWithText("Staubsaugen").performClick()
+        waitFor("Checkliste 0/2")
+        compose.onNodeWithText("Küche").assertExists()
+        compose.onNodeWithText("Bad").assertExists()
+    }
+
+    @Test
     fun tickingTheLastItemCompletesTheChore() {
         waitFor("Noch keine Aufgaben")
         createChore("Bad putzen", checklist = listOf("Lavabo", "WC"))

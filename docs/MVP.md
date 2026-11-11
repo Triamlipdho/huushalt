@@ -47,7 +47,7 @@ if time allows, **Could** = nice to have, not yet decided, **Later** = decided f
 | F1.4 | Assign a chore to a room or area (kitchen, bathroom, ...), with editable list of rooms | Should |
 | F1.5 | Pick an icon or colour for a chore (done in v1.2.0: guessed from the name, changeable) | Could |
 | F1.6 | Estimated duration (e.g. 15 min), shown in the daily list | Could |
-| F1.7 | Optional checklist of sub-steps per chore (e.g. "Bad putzen" = Lavabo, WC, Dusche, Spiegel). Items are ticked off while doing the chore and reset for the next occurrence | Should |
+| F1.7 | Optional checklist of sub-steps per chore (e.g. "Bad putzen" = Lavabo, WC, Dusche, Spiegel). Items are ticked off while doing the chore, also before it is due and over several days, and reset for the next occurrence (after completing or skipping). "Alle Räume einfügen" adds every room as an item (e.g. "Staubsaugen") | Should |
 | F1.8 | Completing a chore with an unfinished checklist asks once whether to mark it done anyway. Unticked items are not stored as done | Must (if F1.7 is built) |
 | F1.9 | Ticking the last checklist item marks the chore as done | Could |
 | F1.10 | Duplicate a chore (copy with all settings and checklist, without history) | Later |

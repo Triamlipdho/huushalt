@@ -535,9 +535,24 @@ fun ChoreEditScreen(
                     }
                 }
             }
-            TextButton(onClick = { checklist.add(ChecklistDraft(null, "")) }) {
-                Icon(Icons.Filled.Add, contentDescription = null)
-                Text(stringResource(R.string.checklist_add), modifier = Modifier.padding(start = 8.dp))
+            Row {
+                TextButton(onClick = { checklist.add(ChecklistDraft(null, "")) }) {
+                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Text(stringResource(R.string.checklist_add), modifier = Modifier.padding(start = 8.dp))
+                }
+                // One tap for a chore done room by room, e.g. "Staubsaugen": every room not listed yet.
+                val missingRooms = areas.map { it.name }.filter { room ->
+                    checklist.none { it.text.trim().equals(room.trim(), ignoreCase = true) }
+                }
+                if (missingRooms.isNotEmpty()) {
+                    TextButton(onClick = {
+                        // Empty rows are replaced, they would only be left over.
+                        checklist.removeAll { it.text.isBlank() }
+                        checklist.addAll(missingRooms.map { ChecklistDraft(null, it) })
+                    }) {
+                        Text(stringResource(R.string.checklist_add_rooms))
+                    }
+                }
             }
 
             // Deleting is at the end of the form, far away from "Speichern".
