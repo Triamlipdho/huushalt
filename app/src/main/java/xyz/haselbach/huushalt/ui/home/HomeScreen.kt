@@ -1,5 +1,6 @@
 package xyz.haselbach.huushalt.ui.home
 
+import xyz.haselbach.huushalt.ui.components.stickyBackground
 import xyz.haselbach.huushalt.ui.theme.Spacing
 import xyz.haselbach.huushalt.ui.theme.Sizes
 import androidx.compose.foundation.layout.heightIn
@@ -75,6 +76,8 @@ fun HomeScreen(
     contentPadding: PaddingValues,
     onOpen: (Chore) -> Unit,
     onComplete: (Chore) -> Unit,
+    /** Straight to the detail screen, e.g. for an interval suggestion shown there. */
+    onOpenDetails: (Chore) -> Unit = onOpen,
     header: @Composable () -> Unit = {},
     /** Current "Alles erledigt" streak, or null when motivation is turned off (F7.2, F7.9). */
     streak: Int? = null,
@@ -119,7 +122,7 @@ fun HomeScreen(
         }
         intervalSuggestions.firstOrNull()?.let { (chore, suggestion) ->
             item(key = "interval-suggestion") {
-                IntervalSuggestionHint(chore, suggestion, more = intervalSuggestions.size - 1, onClick = { onOpen(chore) })
+                IntervalSuggestionHint(chore, suggestion, more = intervalSuggestions.size - 1, onClick = { onOpenDetails(chore) })
             }
         }
         if (areas.isNotEmpty() && state.hasChores) {
@@ -317,8 +320,13 @@ private fun LazyListScope.section(
     onPostpone: ((Chore) -> Unit)? = null,
 ) {
     if (chores.isEmpty()) return
-    item(key = "header-$title") {
-        if (action == null) SectionHeader(stringResource(title)) else SectionHeaderWithAction(stringResource(title), action.first, action.second)
+    // The section title stays at the top while its chores scroll by.
+    stickyHeader(key = "header-$title") {
+        if (action == null) {
+            SectionHeader(stringResource(title), Modifier.stickyBackground())
+        } else {
+            SectionHeaderWithAction(stringResource(title), action.first, action.second, Modifier.stickyBackground())
+        }
     }
     items(chores, key = { "chore-${it.id}" }) { chore ->
         ChoreRow(

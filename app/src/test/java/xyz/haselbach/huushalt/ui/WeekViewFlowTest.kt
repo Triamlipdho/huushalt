@@ -3,7 +3,9 @@ package xyz.haselbach.huushalt.ui
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assertContentDescriptionContains
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
@@ -15,7 +17,6 @@ import androidx.compose.ui.test.performClick
 import java.time.DayOfWeek
 import java.time.LocalDate
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -58,53 +59,63 @@ class WeekViewFlowTest {
         }
     }
 
-    private fun waitFor(text: String) =
-        compose.waitUntilAtLeastOneExists(hasText(text), timeoutMillis = 5_000)
+    private fun waitFor(text: String, substring: Boolean = false) =
+        compose.waitUntilAtLeastOneExists(hasText(text, substring = substring), timeoutMillis = 5_000)
 
     /** Inside the list, not the bottom bar ("Heute" is also a tab). */
     private val inList: SemanticsMatcher = hasAnyAncestor(hasScrollAction())
 
-    private fun SemanticsNodeInteraction.top() = fetchSemanticsNode().boundsInRoot.top
-
-    /** Tops of the rows with [name] that lie in the section of [day]. */
-    private fun rowsOn(day: LocalDate, name: String): Int {
-        val header = compose.onNode(hasText(day.formatShort(), substring = true) and isHeading()).top()
-        val next = compose.onNode(hasText(day.plusDays(1).formatShort(), substring = true) and isHeading()).top()
-        return compose.onAllNodesWithText(name).fetchSemanticsNodes().count { it.boundsInRoot.top in header..next }
-    }
-
     private fun isHeading() = SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading)
 
+    /** A day of the week strip, by what TalkBack reads, e.g. "Mo., 16.11.: 1 Aufgabe". */
+    private fun day(date: LocalDate) = hasContentDescription(date.formatShort(), substring = true)
+
+    private fun kw(weekStart: LocalDate) = "KW ${WeekForecast.calendarWeek(weekStart)}"
+
     @Test
-    fun weekViewShowsEveryOccurrenceAndPagesWeeks() {
+    fun weekViewShowsTheWeekAsAStripAndOneDayAtATime() {
         waitFor("Kehricht rausbringen")
         compose.onNodeWithText("Alle Aufgaben").performClick()
         compose.onNodeWithText("Woche").performClick()
-        waitFor("Diese Woche")
-        // The real due date is in this week; today is highlighted.
-        compose.onNode(hasText("Heute · ${today.formatShort()}") and isHeading()).assertExists()
+        val thisWeek = WeekForecast.weekStart(today, DayOfWeek.MONDAY)
+        waitFor(kw(thisWeek))
+        compose.onNode(hasText("Diese Woche", substring = true) and inList).assertExists()
+        // Today is selected and marked; its chores are listed below the strip.
+        compose.onNode(day(today)).assertIsSelected()
+        compose.onNode(hasContentDescription("Heute, ", substring = true)).assertExists()
+        compose.onNode(hasText("Heute · ${today.formatLong()}") and isHeading()).assertExists()
 
+        // Next week: Monday and Thursday have one chore each, the other days nothing.
         compose.onNodeWithContentDescription("Nächste Woche").performClick()
-        waitFor(nextWeek.formatShort())
-        compose.onNode(hasText("Nächste Woche") and inList).assertExists()
+        waitFor(kw(nextWeek))
+        compose.onNode(hasText("Nächste Woche", substring = true) and inList).assertExists()
         compose.onNodeWithText("2 Aufgaben in dieser Woche").assertExists()
-        assertEquals(1, rowsOn(nextWeek, "Kehricht rausbringen"))
-        assertEquals(0, rowsOn(nextWeek.plusDays(1), "Kehricht rausbringen"))
-        assertEquals(1, rowsOn(nextWeek.plusDays(3), "Kehricht rausbringen"))
-        // Both are a forecast, unless today is Sunday and Monday is the real next due date.
-        assertTrue(compose.onAllNodesWithText("Voraussichtlich", substring = true).fetchSemanticsNodes().size in 1..2)
-        assertTrue(compose.onAllNodesWithText("Nichts fällig").fetchSemanticsNodes().size == 5)
+        compose.onNode(day(nextWeek)).assertContentDescriptionContains("1 Aufgabe", substring = true)
+        compose.onNode(day(nextWeek.plusDays(1))).assertContentDescriptionContains("Nichts fällig", substring = true)
+        compose.onNode(day(nextWeek.plusDays(3))).assertContentDescriptionContains("1 Aufgabe", substring = true)
+
+        // Tapping a day lists its chores.
+        compose.onNode(day(nextWeek.plusDays(1))).performClick()
+        compose.onNode(hasText(nextWeek.plusDays(1).formatLong()) and isHeading()).assertExists()
+        compose.onNodeWithText("Nichts fällig").assertExists()
+        compose.onNode(day(nextWeek.plusDays(3))).performClick()
+        compose.onNode(day(nextWeek.plusDays(3))).assertIsSelected()
+        compose.onNode(hasText("Kehricht rausbringen") and inList).assertExists()
+        // A forecast, unless today is Sunday and Monday is the real next due date.
+        assertTrue(compose.onAllNodesWithText("Voraussichtlich", substring = true).fetchSemanticsNodes().isNotEmpty())
         compose.screenshot("20-week-next")
 
+        // The weekday stays selected when paging; "Heute" comes back to today.
         compose.onNodeWithContentDescription("Nächste Woche").performClick()
-        waitFor("In 2 Wochen")
+        waitFor(kw(nextWeek.plusWeeks(1)))
+        compose.onNode(day(nextWeek.plusWeeks(1).plusDays(3))).assertIsSelected()
         compose.onNode(hasText("Heute") and inList).performClick()
-        waitFor("Diese Woche")
+        waitFor(kw(thisWeek))
+        compose.onNode(day(today)).assertIsSelected()
         compose.onNodeWithContentDescription("Nächste Woche").performClick()
-        waitFor(nextWeek.formatShort())
+        waitFor(kw(nextWeek))
         compose.onNodeWithContentDescription("Vorherige Woche").performClick()
-        waitFor("Diese Woche")
-        compose.onNode(hasText("Heute · ${today.formatShort()}") and isHeading()).assertExists()
+        waitFor(kw(thisWeek))
 
         compose.onNodeWithText("Liste").performClick()
         waitFor("Nach Fälligkeit")

@@ -48,6 +48,11 @@ class ContrastTest {
         "outline/surface" to (c.outline to c.surface),
         // Progress ring on the progress card
         "primary/primaryContainer" to (c.primary to c.primaryContainer),
+        // Bars of the week chart; the current week is terracotta
+        "primary/surface (bar)" to (c.primary to c.surface),
+        "tertiary/surface (bar)" to (c.tertiary to c.surface),
+        // Today's ring in the week strip
+        "primary/surfaceContainerLow" to (c.primary to c.surfaceContainerLow),
     )
 
     @Test

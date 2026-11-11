@@ -20,7 +20,7 @@ optional in the settings.
 | Overdue ("2 Tage überfällig") | `error`, only on the due part, and always with text |
 | Progress card | `primaryContainer` / `onPrimaryContainer` |
 | Detail summary, statistics | `secondaryContainer` / `onSecondaryContainer` |
-| Earned badges, "+" button | `tertiaryContainer` / `onTertiaryContainer` |
+| Earned badges, "+" button, current week in the chart | `tertiaryContainer` / `onTertiaryContainer`, `tertiary` bar |
 | Outlines of interactive elements | `outline` (≥ 3:1). `outlineVariant` only for dividers |
 | Swipe right (done) / left (postpone) | `primaryContainer` / `errorContainer`, each with an icon |
 
@@ -94,6 +94,13 @@ Flat by default: cards are told apart by container colour, not shadows. Tonal el
 | `SectionHeader(WithAction)` | Lists | Heading semantics; optional text action on the same baseline |
 | `EmptyState` | Lists | Title, explanation, optional primary button |
 | Cards | Progress, statistics, hints | Filled container colour, `medium` shape, `lg` padding |
+| `ChoreSheet` | Tap on any chore | Bottom sheet: due date, schedule, checklist, Erledigt / Verschieben / Überspringen; Bearbeiten and Details one step further |
+| `HuushaltSnackbarHost` | All screens | Floating, `large` shape, `inverseSurface`, icon of what happened, swipe to dismiss, "Rückgängig" in `inversePrimary` |
+| Week strip | Alle Aufgaben → Woche | "KW 46", 7 day cells (min. 88 dp tall): dots per chore (number from 5), beach icon on holidays; today has a 2 dp `primary` ring, the selected day is filled `primaryContainer` |
+| Top app bar | Tabs | `MediumTopAppBar`, collapses on scroll to a small bar; the title stays. Section headers are sticky |
+
+Weeks are shown as calendar weeks ("KW 46", ISO 8601) in the week view and the Fortschritt
+chart; the current week is highlighted by colour and a filled label.
 
 ## Checking a change
 

@@ -2,6 +2,7 @@ package xyz.haselbach.huushalt.domain
 
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.temporal.IsoFields
 import java.time.temporal.TemporalAdjusters
 
 /**
@@ -24,6 +25,13 @@ object WeekForecast {
     /** First day of the week that contains [date]. */
     fun weekStart(date: LocalDate, firstDayOfWeek: DayOfWeek): LocalDate =
         date.with(TemporalAdjusters.previousOrSame(firstDayOfWeek))
+
+    /**
+     * Calendar week ("KW") of the week starting on [weekStart], as used in Switzerland (ISO 8601).
+     * Weeks that start on another day than Monday get the number of the ISO week they share most
+     * days with, i.e. the one containing their fourth day.
+     */
+    fun calendarWeek(weekStart: LocalDate): Int = weekStart.plusDays(3).get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
 
     /**
      * The days on which [chore] will be due from [from] to [to] (both inclusive), as seen on [today].

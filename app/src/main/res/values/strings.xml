@@ -182,8 +182,8 @@
     <string name="stats_on_time_value">%d %%</string>
     <string name="stats_on_time_note">Letzte 30 Tage</string>
     <string name="stats_no_value">–</string>
-    <string name="stats_chart_title">Erledigt pro Woche</string>
-    <string name="stats_chart_description">Erledigt pro Woche, ältere zuerst: %s</string>
+    <string name="stats_chart_title">Erledigt pro Kalenderwoche</string>
+    <string name="stats_chart_description">Erledigt pro Kalenderwoche, ältere zuerst: %s</string>
     <string name="stats_activity">Zuletzt erledigt</string>
     <string name="stats_activity_empty">Hier erscheint alles, was du erledigst.</string>
     <string name="celebration_all_done">Alles erledigt für heute 🎉</string>
@@ -492,6 +492,23 @@
     <string name="week_holiday">Ferien</string>
     <string name="week_forecast">Voraussichtlich</string>
     <string name="week_summary_none">In dieser Woche ist nichts fällig</string>
+    <!-- Calendar week, e.g. "KW 46" -->
+    <string name="calendar_week">KW %d</string>
+    <!-- Spoken: "Kalenderwoche 46" -->
+    <string name="calendar_week_long">Kalenderwoche %d</string>
+    <!-- Spoken for a day of the week strip. %1$s: "Do., 12.11.", %2$s: e.g. "2 Aufgaben" -->
+    <string name="week_day_description">%1$s: %2$s</string>
+    <string name="week_day_today_description">Heute, %1$s: %2$s</string>
+    <string name="week_day_holiday_description">%s: Ferien</string>
+    <!-- Hint below the week strip -->
+    <string name="week_busiest">Am meisten zu tun: %1$s (%2$d)</string>
+    <string name="week_swipe_hint">Tag antippen für die Aufgaben</string>
+    <!-- Chore sheet (tap on a chore) -->
+    <string name="sheet_details">Details und Verlauf</string>
+    <string name="sheet_last_done">Zuletzt: %s</string>
+    <string name="sheet_never_done">Noch nie erledigt</string>
+    <!-- Progress chart: current week -->
+    <string name="stats_chart_this_week">diese Woche</string>
     <plurals name="week_summary">
         <item quantity="one">%d Aufgabe in dieser Woche</item>
         <item quantity="other">%d Aufgaben in dieser Woche</item>

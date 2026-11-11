@@ -1,5 +1,6 @@
 package xyz.haselbach.huushalt.ui.detail
 
+import xyz.haselbach.huushalt.ui.components.HuushaltSnackbarHost
 import xyz.haselbach.huushalt.ui.theme.Spacing
 import xyz.haselbach.huushalt.ui.theme.Sizes
 import androidx.compose.material3.ButtonDefaults
@@ -168,7 +169,7 @@ fun ChoreDetailScreen(
                 },
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { HuushaltSnackbarHost(snackbarHostState) },
     ) { padding ->
         LazyColumn(contentPadding = padding) {
             item(key = "summary") { Summary(chore, today, streak) }
@@ -398,7 +399,7 @@ private fun HistoryRow(completion: CompletionEntity, previous: CompletionEntity?
 }
 
 @Composable
-private fun InfoRow(icon: ImageVector, text: String) {
+internal fun InfoRow(icon: ImageVector, text: String) {
     Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
         Text(text, style = MaterialTheme.typography.bodyLarge)
@@ -407,7 +408,7 @@ private fun InfoRow(icon: ImageVector, text: String) {
 
 /** Postpone to tomorrow, in a week or to a chosen date (F4.4). */
 @Composable
-private fun PostponeDialog(today: LocalDate, onDismiss: () -> Unit, onPick: (LocalDate) -> Unit) {
+internal fun PostponeDialog(today: LocalDate, onDismiss: () -> Unit, onPick: (LocalDate) -> Unit) {
     var pickDate by rememberSaveable { mutableStateOf(false) }
     val tomorrow = today.plusDays(1)
     if (pickDate) {

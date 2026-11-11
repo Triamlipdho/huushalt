@@ -1,5 +1,6 @@
 package xyz.haselbach.huushalt.ui
 
+import xyz.haselbach.huushalt.testing.openDetails
 import android.content.Intent
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasText
@@ -62,7 +63,7 @@ class QuickCreateFlowTest {
     fun duplicateCopiesTheSettings() {
         runBlocking { app.repository.addFromTemplates(ChoreCatalog.templates.filter { it.name == "Bad putzen" }) }
         waitFor("Bad putzen")
-        compose.onNodeWithText("Bad putzen").performClick()
+        compose.openDetails("Bad putzen")
         compose.onNodeWithContentDescription("Weitere Aktionen").performClick()
         compose.onNodeWithText("Duplizieren").performClick()
         waitFor("Bad putzen (Kopie)")

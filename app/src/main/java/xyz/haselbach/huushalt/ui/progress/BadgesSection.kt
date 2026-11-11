@@ -1,5 +1,8 @@
 package xyz.haselbach.huushalt.ui.progress
 
+import xyz.haselbach.huushalt.ui.components.show
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.Icons
 import xyz.haselbach.huushalt.ui.theme.Spacing
 import xyz.haselbach.huushalt.ui.theme.Sizes
 import android.content.res.Resources
@@ -275,7 +278,7 @@ fun AnnounceNewBadges(
             } else {
                 resources.getQuantityString(R.plurals.snackbar_new_badges, keep.size, keep.size)
             }
-            snackbarHostState.showSnackbar(message)
+            snackbarHostState.show(message, Icons.Filled.EmojiEvents)
         }
     }
 }

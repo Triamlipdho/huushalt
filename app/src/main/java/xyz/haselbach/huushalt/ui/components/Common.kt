@@ -1,5 +1,6 @@
 package xyz.haselbach.huushalt.ui.components
 
+import androidx.compose.foundation.background
 import xyz.haselbach.huushalt.ui.theme.Spacing
 import xyz.haselbach.huushalt.ui.theme.Sizes
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -23,6 +24,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
+/** Background for sticky headers, so rows scrolling underneath don't show through. */
+@Composable
+fun Modifier.stickyBackground(): Modifier = fillMaxWidth().background(MaterialTheme.colorScheme.background)
+
 @Composable
 fun SectionHeader(text: String, modifier: Modifier = Modifier) {
     Text(
@@ -37,8 +42,8 @@ fun SectionHeader(text: String, modifier: Modifier = Modifier) {
 
 /** A section header with an action on the right, e.g. "Überfällig … Neu planen", on one baseline. */
 @Composable
-fun SectionHeaderWithAction(text: String, action: String, onAction: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(end = Spacing.xs)) {
+fun SectionHeaderWithAction(text: String, action: String, onAction: () -> Unit, modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth().padding(end = Spacing.xs)) {
         SectionHeader(text, Modifier.weight(1f).alignByBaseline())
         Text(
             action,

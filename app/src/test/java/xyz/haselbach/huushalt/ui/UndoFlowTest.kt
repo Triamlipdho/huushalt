@@ -1,5 +1,6 @@
 package xyz.haselbach.huushalt.ui
 
+import xyz.haselbach.huushalt.testing.openDetails
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.performSemanticsAction
@@ -105,7 +106,7 @@ class UndoFlowTest {
     fun deletingFromTheMenuCanBeUndone() {
         waitFor("Noch keine Aufgaben")
         createChore("Staubsaugen")
-        compose.onNodeWithText("Staubsaugen").performClick()
+        compose.openDetails("Staubsaugen")
         compose.onNodeWithContentDescription("Weitere Aktionen").performClick()
         compose.onNodeWithText("Löschen").performClick()
         waitFor("«Staubsaugen» löschen?")

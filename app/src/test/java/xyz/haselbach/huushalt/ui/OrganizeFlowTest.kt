@@ -1,5 +1,6 @@
 package xyz.haselbach.huushalt.ui
 
+import xyz.haselbach.huushalt.testing.openDetails
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -59,7 +60,7 @@ class OrganizeFlowTest {
         createChore("Bad putzen", room = "Bad", checklist = listOf("Lavabo", "WC"))
         waitFor("Bad\u00A0·\u00A00/2")
 
-        compose.onNodeWithText("Bad putzen").performClick()
+        compose.openDetails("Bad putzen")
         waitFor("Checkliste 0/2")
         compose.onNodeWithText("Lavabo").performClick()
         waitFor("Checkliste 1/2")
@@ -77,7 +78,7 @@ class OrganizeFlowTest {
         waitFor("Noch keine Aufgaben")
         createChore("Staubsaugen", checklist = listOf("Küche", "Bad", "Flur"))
         waitFor("Heute fällig")
-        compose.onNodeWithText("Staubsaugen").performClick()
+        compose.openDetails("Staubsaugen")
         compose.onNodeWithText("Küche").performClick()
         compose.onNodeWithText("Bad").performClick()
         waitFor("Checkliste 2/3")
@@ -108,7 +109,7 @@ class OrganizeFlowTest {
         compose.onNodeWithText("Speichern").performClick()
         waitFor("0/2", substring = true)
 
-        compose.onNodeWithText("Staubsaugen").performClick()
+        compose.openDetails("Staubsaugen")
         waitFor("Checkliste 0/2")
         compose.onNodeWithText("Küche").assertExists()
         compose.onNodeWithText("Bad").assertExists()
@@ -120,7 +121,7 @@ class OrganizeFlowTest {
         createChore("Bad putzen", checklist = listOf("Lavabo", "WC"))
         // Wait for the row on Heute; the editor may still be animating out.
         waitFor("Heute fällig")
-        compose.onNodeWithText("Bad putzen").performClick()
+        compose.openDetails("Bad putzen")
         waitFor("Checkliste 0/2")
         compose.onNodeWithText("Lavabo").performClick()
         waitFor("Checkliste 1/2")
@@ -155,7 +156,7 @@ class OrganizeFlowTest {
         waitFor("Staubsaugen")
 
         // Pause (F1.3): gone from Heute, listed as paused in Alle Aufgaben.
-        compose.onNodeWithText("Staubsaugen").performClick()
+        compose.openDetails("Staubsaugen")
         compose.onNodeWithContentDescription("Weitere Aktionen").performClick()
         compose.onNodeWithText("Pausieren").performClick()
         waitFor("Fortsetzen")

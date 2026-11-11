@@ -1,5 +1,9 @@
 package xyz.haselbach.huushalt.ui.progress
 
+import xyz.haselbach.huushalt.domain.WeekCount
+import xyz.haselbach.huushalt.domain.WeekForecast
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.shape.CircleShape
 import xyz.haselbach.huushalt.ui.theme.Spacing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -30,7 +34,6 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import java.time.format.DateTimeFormatter
 import xyz.haselbach.huushalt.R
 import xyz.haselbach.huushalt.domain.Area
 import xyz.haselbach.huushalt.domain.Stats
@@ -40,7 +43,6 @@ import xyz.haselbach.huushalt.ui.components.ChoreAvatar
 import xyz.haselbach.huushalt.ui.components.SectionHeader
 import xyz.haselbach.huushalt.ui.formatLong
 
-private val weekLabel = DateTimeFormatter.ofPattern("dd.MM.")
 
 /** Streaks, statistics, badges and everything done recently (F6.3, F7.2, F7.4, F7.7, F7.8). */
 @Composable
@@ -145,37 +147,69 @@ private fun StatCard(title: String, value: String, note: String, modifier: Modif
     }
 }
 
-/** Simple bar chart of the last 8 weeks; read out as a list for TalkBack (N6). */
+/**
+ * Bar chart of the last 8 calendar weeks ("KW 46"), the current one highlighted by a terracotta
+ * bar and a filled label, not by colour alone. Read out as a list for TalkBack (N6).
+ */
 @Composable
 private fun WeekChart(stats: Stats) {
     val max = stats.weeks.maxOf { it.count }.coerceAtLeast(1)
+    val current = stats.weeks.lastOrNull()?.weekStart
+    val thisWeek = stringResource(R.string.stats_chart_this_week)
+    val longWeekPattern = stringResource(R.string.calendar_week_long)
+    val longWeek = { week: WeekCount -> longWeekPattern.format(WeekForecast.calendarWeek(week.weekStart)) }
     val description = stringResource(
         R.string.stats_chart_description,
-        stats.weeks.joinToString(", ") { "${it.weekStart.format(weekLabel)}: ${it.count}" },
+        stats.weeks.joinToString(", ") { week ->
+            val name = longWeek(week) + if (week.weekStart == current) " ($thisWeek)" else ""
+            "$name: ${week.count}"
+        },
     )
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+    val colors = MaterialTheme.colorScheme
+    Column(Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.sm)) {
         Text(stringResource(R.string.stats_chart_title), style = MaterialTheme.typography.titleSmall)
         Row(
             Modifier
                 .fillMaxWidth()
-                .height(140.dp)
+                .height(160.dp)
                 .padding(top = Spacing.sm)
                 .clearAndSetSemantics { contentDescription = description },
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             verticalAlignment = Alignment.Bottom,
         ) {
             stats.weeks.forEach { week ->
+                val isCurrent = week.weekStart == current
                 Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.Bottom, horizontalAlignment = Alignment.CenterHorizontally) {
                     // Empty weeks get no "0" label, just the thin bar.
-                    Text(if (week.count > 0) week.count.toString() else "", style = MaterialTheme.typography.labelSmall)
+                    Text(
+                        if (week.count > 0) week.count.toString() else "",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = if (isCurrent) FontWeight.Bold else null,
+                    )
                     Box(
                         Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.75f * week.count / max + 0.02f)
-                            .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                            .background(MaterialTheme.colorScheme.primary),
+                            .fillMaxWidth(0.8f)
+                            .fillMaxHeight(0.7f * week.count / max + 0.02f)
+                            .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                            .background(if (isCurrent) colors.tertiary else colors.primary),
                     )
-                    Text(week.weekStart.format(weekLabel), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        stringResource(R.string.calendar_week, WeekForecast.calendarWeek(week.weekStart)),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = if (isCurrent) FontWeight.Bold else null,
+                        color = if (isCurrent) colors.onTertiaryContainer else colors.onSurfaceVariant,
+                        maxLines = 1,
+                        softWrap = false,
+                        modifier = Modifier
+                            .padding(top = Spacing.xs)
+                            .then(
+                                if (isCurrent) {
+                                    Modifier.background(colors.tertiaryContainer, CircleShape).padding(horizontal = Spacing.xs)
+                                } else {
+                                    Modifier
+                                },
+                            ),
+                    )
                 }
             }
         }
