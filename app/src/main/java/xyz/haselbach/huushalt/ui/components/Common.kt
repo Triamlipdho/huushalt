@@ -1,5 +1,9 @@
 package xyz.haselbach.huushalt.ui.components
 
+import xyz.haselbach.huushalt.ui.theme.Spacing
+import xyz.haselbach.huushalt.ui.theme.Sizes
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -26,7 +30,7 @@ fun SectionHeader(text: String, modifier: Modifier = Modifier) {
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
         modifier = modifier
-            .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp)
+            .padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.lg, bottom = Spacing.xs)
             .semantics { heading() },
     )
 }
@@ -34,7 +38,7 @@ fun SectionHeader(text: String, modifier: Modifier = Modifier) {
 /** A section header with an action on the right, e.g. "Überfällig … Neu planen", on one baseline. */
 @Composable
 fun SectionHeaderWithAction(text: String, action: String, onAction: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(end = 4.dp)) {
+    Row(Modifier.fillMaxWidth().padding(end = Spacing.xs)) {
         SectionHeader(text, Modifier.weight(1f).alignByBaseline())
         Text(
             action,
@@ -44,7 +48,10 @@ fun SectionHeaderWithAction(text: String, action: String, onAction: () -> Unit) 
                 .alignByBaseline()
                 .clip(MaterialTheme.shapes.small)
                 .clickable(role = Role.Button, onClick = onAction)
-                .padding(horizontal = 12.dp, vertical = 12.dp),
+                // At least 48 dp tall, like every other touch target.
+                .heightIn(min = Sizes.touchTarget)
+                .wrapContentHeight(Alignment.CenterVertically)
+                .padding(horizontal = Spacing.md),
         )
     }
 }
@@ -58,8 +65,8 @@ fun EmptyState(
     onAction: () -> Unit = {},
 ) {
     Column(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 48.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier.fillMaxWidth().padding(horizontal = Spacing.xxl, vertical = Spacing.xxxl),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(title, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
@@ -70,7 +77,7 @@ fun EmptyState(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (actionLabel != null) {
-            Button(onClick = onAction, modifier = Modifier.padding(top = 8.dp)) { Text(actionLabel) }
+            Button(onClick = onAction, modifier = Modifier.padding(top = Spacing.sm)) { Text(actionLabel) }
         }
     }
 }

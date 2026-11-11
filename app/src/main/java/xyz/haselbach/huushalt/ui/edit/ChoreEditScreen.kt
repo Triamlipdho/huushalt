@@ -1,5 +1,8 @@
 package xyz.haselbach.huushalt.ui.edit
 
+import xyz.haselbach.huushalt.ui.theme.Sizes
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.filled.EventRepeat
 import androidx.compose.material3.ButtonDefaults
@@ -838,7 +841,7 @@ private fun QuickSuggestions(query: String, existingNames: Set<String>, onPick: 
                 SuggestionChip(
                     onClick = { onPick(template) },
                     label = { Text(template.name) },
-                    icon = { Icon(ChoreSymbol.guess(template.name).icon, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                    icon = { Icon(ChoreSymbol.guess(template.name).icon, contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize)) },
                 )
             }
         }
@@ -903,15 +906,21 @@ private fun SymbolPickerDialog(
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     ChoreColor.entries.forEach { option ->
                         val selected = option == color
+                        // 48 dp touch target; the chosen colour gets a tick as well as the ring,
+                        // so the choice isn't shown by colour alone.
+                        val swatch = option.colors()
                         Box(
                             Modifier
-                                .size(40.dp)
+                                .size(Sizes.touchTarget)
                                 .clip(CircleShape)
-                                .background(option.colors().container)
-                                .border(if (selected) 3.dp else 1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                .background(swatch.container)
+                                .border(if (selected) 3.dp else 1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, CircleShape)
                                 .selectable(selected = selected, role = Role.RadioButton, onClick = { color = option })
                                 .semantics { contentDescription = colorNames.getValue(option) },
-                        )
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (selected) Icon(Icons.Filled.Check, contentDescription = null, tint = swatch.content)
+                        }
                     }
                 }
             }

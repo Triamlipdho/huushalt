@@ -1,5 +1,6 @@
 package xyz.haselbach.huushalt.ui.progress
 
+import xyz.haselbach.huushalt.ui.theme.Spacing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -136,7 +137,7 @@ private fun StatCard(title: String, value: String, note: String, modifier: Modif
             contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
         ),
     ) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.padding(Spacing.md), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             Text(title, style = MaterialTheme.typography.labelMedium)
             Text(value, style = MaterialTheme.typography.headlineSmall)
             Text(note, style = MaterialTheme.typography.bodySmall)
@@ -158,9 +159,9 @@ private fun WeekChart(stats: Stats) {
             Modifier
                 .fillMaxWidth()
                 .height(140.dp)
-                .padding(top = 8.dp)
+                .padding(top = Spacing.sm)
                 .clearAndSetSemantics { contentDescription = description },
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.Bottom,
         ) {
             stats.weeks.forEach { week ->

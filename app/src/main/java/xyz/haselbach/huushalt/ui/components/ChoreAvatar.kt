@@ -1,5 +1,6 @@
 package xyz.haselbach.huushalt.ui.components
 
+import xyz.haselbach.huushalt.ui.theme.Sizes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -81,7 +82,10 @@ val ChoreSymbol.icon: ImageVector
 data class SymbolColors(val container: Color, val content: Color)
 
 @Composable
-fun ChoreColor.colors(dark: Boolean = isSystemInDarkTheme()): SymbolColors {
+fun ChoreColor.colors(dark: Boolean = isSystemInDarkTheme()): SymbolColors = colorsFor(dark)
+
+/** As [colors], outside of composition (contrast test). */
+fun ChoreColor.colorsFor(dark: Boolean): SymbolColors {
     // Pastel containers with dark icons in light mode; deep containers with light icons in dark mode.
     val (light, deep) = when (this) {
         ChoreColor.BLUE -> 0xFFD6E4FF to 0xFF1F3A66
@@ -110,7 +114,7 @@ fun ChoreColor.colors(dark: Boolean = isSystemInDarkTheme()): SymbolColors {
 
 /** A chore's symbol in a coloured circle (F1.5). Decorative: the chore name says what it is. */
 @Composable
-fun ChoreAvatar(look: ChoreLook, modifier: Modifier = Modifier, size: Dp = 40.dp) {
+fun ChoreAvatar(look: ChoreLook, modifier: Modifier = Modifier, size: Dp = Sizes.avatar) {
     val colors = look.color.colors()
     Box(
         modifier = modifier.size(size).background(colors.container, CircleShape),

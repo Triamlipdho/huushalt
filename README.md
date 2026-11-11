@@ -17,7 +17,7 @@ It deliberately does one thing, chores, and does it without accounts, flatmates 
 The app is in **German only** (Swiss spelling, *ss* instead of *ß*). This documentation is in
 English.
 
-Feature list, scope and design decisions: [docs/MVP.md](docs/MVP.md)
+Feature list, scope and design decisions: [docs/MVP.md](docs/MVP.md); design system (colours, type, spacing, accessibility): [docs/DESIGN.md](docs/DESIGN.md)
 
 ## Install
 

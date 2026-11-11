@@ -1,5 +1,8 @@
 package xyz.haselbach.huushalt.ui.home
 
+import xyz.haselbach.huushalt.ui.theme.Spacing
+import xyz.haselbach.huushalt.ui.theme.Sizes
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
@@ -254,7 +257,7 @@ private fun Progress(state: HomeState, streak: Int?) {
                     CircularProgressIndicator(
                         progress = { progress },
                         modifier = Modifier.fillMaxSize(),
-                        strokeWidth = 6.dp,
+                        strokeWidth = Sizes.ringStroke,
                         trackColor = colors.surface.copy(alpha = 0.6f),
                         strokeCap = StrokeCap.Round,
                         gapSize = 0.dp,
@@ -337,7 +340,8 @@ private fun DoneHeader(count: Int, expanded: Boolean, onToggle: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .clickable(onClickLabel = action, onClick = onToggle)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .heightIn(min = Sizes.touchTarget)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(

@@ -1,7 +1,9 @@
 package xyz.haselbach.huushalt.ui.theme
 
 import android.os.Build
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -9,13 +11,14 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 
 /*
  * huushalt's own colours: a fresh green, with a warm terracotta as accent (streaks, celebrations,
  * the "add" button). Every role is set, so nothing falls back to Material's default purple, and
  * surfaces have a hint of green instead of plain grey.
  */
-private val LightColors = lightColorScheme(
+internal val LightColors = lightColorScheme(
     primary = Color(0xFF2E6B4F),
     onPrimary = Color(0xFFFFFFFF),
     primaryContainer = Color(0xFFB4F0CF),
@@ -49,7 +52,7 @@ private val LightColors = lightColorScheme(
     inversePrimary = Color(0xFF98D4B3),
 )
 
-private val DarkColors = darkColorScheme(
+internal val DarkColors = darkColorScheme(
     primary = Color(0xFF98D4B3),
     onPrimary = Color(0xFF003824),
     primaryContainer = Color(0xFF125238),
@@ -84,6 +87,18 @@ private val DarkColors = darkColorScheme(
 )
 
 /**
+ * Corner radii (Material 3 shape scale). Cards and the progress card use medium, dialogs and
+ * sheets extra large; chips and small buttons small. Pills and avatars use CircleShape.
+ */
+internal val HuushaltShapes = Shapes(
+    extraSmall = RoundedCornerShape(4.dp),
+    small = RoundedCornerShape(8.dp),
+    medium = RoundedCornerShape(16.dp),
+    large = RoundedCornerShape(20.dp),
+    extraLarge = RoundedCornerShape(28.dp),
+)
+
+/**
  * Material 3 theme with dark mode (N5). huushalt's own colours by default; colours from the
  * wallpaper on Android 12+ when turned on in the settings.
  */
@@ -101,5 +116,5 @@ fun HuushaltTheme(
         darkTheme -> DarkColors
         else -> LightColors
     }
-    MaterialTheme(colorScheme = colorScheme, content = content)
+    MaterialTheme(colorScheme = colorScheme, shapes = HuushaltShapes, content = content)
 }

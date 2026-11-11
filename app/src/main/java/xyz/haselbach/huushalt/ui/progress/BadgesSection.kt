@@ -1,5 +1,7 @@
 package xyz.haselbach.huushalt.ui.progress
 
+import xyz.haselbach.huushalt.ui.theme.Spacing
+import xyz.haselbach.huushalt.ui.theme.Sizes
 import android.content.res.Resources
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -138,7 +140,7 @@ private fun BadgeCard(badge: Badge, modifier: Modifier) {
             contentColor = if (badge.earned) colors.onTertiaryContainer else colors.onSurfaceVariant,
         ),
     ) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.padding(Spacing.md), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             Text(
                 badge.emoji,
                 style = MaterialTheme.typography.headlineSmall,
@@ -149,7 +151,7 @@ private fun BadgeCard(badge: Badge, modifier: Modifier) {
             if (!badge.earned) {
                 LinearProgressIndicator(
                     progress = { badge.progress.toFloat() / badge.target },
-                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = Spacing.sm),
                     color = colors.outline,
                     trackColor = colors.surfaceContainerHighest,
                     drawStopIndicator = {},
@@ -179,7 +181,7 @@ fun AreaStatsSection(counts: List<AreaCount>, areas: List<Area>) {
         )
         Column(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             counts.forEach { entry ->
                 val name = entry.areaId?.let { names[it] } ?: noRoom
@@ -201,11 +203,11 @@ fun AreaStatsSection(counts: List<AreaCount>, areas: List<Area>) {
                             Box(
                                 Modifier
                                     .fillMaxWidth(0.85f * entry.count / max + 0.01f)
-                                    .height(14.dp)
+                                    .height(Sizes.bar)
                                     .clip(RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp))
                                     .background(MaterialTheme.colorScheme.primary),
                             )
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(Spacing.sm))
                             Text(entry.count.toString(), style = MaterialTheme.typography.labelMedium)
                         }
                     }

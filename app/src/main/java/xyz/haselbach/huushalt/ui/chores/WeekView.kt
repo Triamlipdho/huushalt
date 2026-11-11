@@ -1,5 +1,7 @@
 package xyz.haselbach.huushalt.ui.chores
 
+import xyz.haselbach.huushalt.ui.theme.Spacing
+import xyz.haselbach.huushalt.ui.theme.Sizes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -84,7 +86,7 @@ fun LazyListScope.weekView(
                     stringResource(if (onHoliday) R.string.week_holiday else R.string.week_nothing_due),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp).alpha(MUTED_ALPHA),
+                    modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs).alpha(MUTED_ALPHA),
                 )
             }
         } else {
@@ -161,11 +163,11 @@ private fun WeekChoreRow(occurrence: Occurrence, today: LocalDate, onClick: () -
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .heightIn(min = 56.dp)
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        ChoreAvatar(chore.look, Modifier.alpha(muted), size = 32.dp)
+        ChoreAvatar(chore.look, Modifier.alpha(muted), size = Sizes.avatarSmall)
         Column(Modifier.weight(1f)) {
             Text(
                 chore.name,
